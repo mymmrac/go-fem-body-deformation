@@ -60,8 +60,9 @@ func main() {
 	aY := rl.NewVector3(0, 1, 0)
 	aZ := rl.NewVector3(0, 0, 1)
 
+	showNumbers := false
 	var numbers []rl.Texture2D
-	for i := range 1000 {
+	for i := range 1 << 8 {
 		textImage := rl.ImageTextEx(rl.GetFontDefault(), strconv.Itoa(i), 32, 4, rl.White)
 		numbers = append(numbers, rl.LoadTextureFromImage(textImage))
 		rl.UnloadImage(textImage)
@@ -71,7 +72,7 @@ func main() {
 		uiRect := rl.NewRectangle(
 			0, 0,
 			padding+inputWidth*3+padding*2+padding,
-			padding+inputHeight*2+padding+padding,
+			padding+inputHeight*3+padding*2+padding,
 		)
 
 		if rl.IsKeyPressed(rl.KeySpace) {
@@ -110,7 +111,9 @@ func main() {
 
 				for i, p := range body {
 					rl.DrawCube(p, 0.1, 0.1, 0.1, rl.Blue)
-					rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+					if showNumbers {
+						rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+					}
 				}
 
 				rl.DrawLine3D(a0, aX, rl.Red)
@@ -193,6 +196,11 @@ func main() {
 					}
 				}
 			}
+
+			showNumbers = gui.CheckBox(
+				rl.NewRectangle(padding, padding+inputHeight*2+padding+padding, inputHeight, inputHeight),
+				"Show Numbers", showNumbers,
+			)
 
 			if bodyUpdated {
 				body = buildBodyShape(bodySize, bodySplits)
