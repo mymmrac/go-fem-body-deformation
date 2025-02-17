@@ -41,7 +41,7 @@ func main() {
 		strconv.FormatFloat(float64(bodySplits.Z), 'f', 0, 64),
 	}
 
-	body := buildBodyShape(bodySize, bodySplits)
+	body, bodyOuterIndexes := buildBodyShape(bodySize, bodySplits)
 
 	var (
 		bodySizesEdit  [3]bool
@@ -62,7 +62,7 @@ func main() {
 
 	showNumbers := false
 	var numbers []rl.Texture2D
-	for i := range 1 << 8 {
+	for i := range 1 << 11 {
 		textImage := rl.ImageTextEx(rl.GetFontDefault(), strconv.Itoa(i), 32, 4, rl.White)
 		numbers = append(numbers, rl.LoadTextureFromImage(textImage))
 		rl.UnloadImage(textImage)
@@ -109,10 +109,20 @@ func main() {
 				// rl.DrawCube(rl.NewVector3(0, bodySize.Y/2, 0), bodySize.X, bodySize.Y, bodySize.Z, rl.Red)
 				rl.DrawCubeWires(rl.NewVector3(0, bodySize.Y/2, 0), bodySize.X, bodySize.Y, bodySize.Z, rl.Black)
 
-				for i, p := range body {
-					rl.DrawCube(p, 0.1, 0.1, 0.1, rl.Blue)
-					if showNumbers {
-						rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+				if false {
+					for i, p := range body {
+						rl.DrawCube(p, 0.1, 0.1, 0.1, rl.Blue)
+						if showNumbers {
+							rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+						}
+					}
+				} else {
+					for _, i := range bodyOuterIndexes {
+						p := body[i]
+						rl.DrawCube(p, 0.1, 0.1, 0.1, rl.Blue)
+						if showNumbers {
+							rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+						}
 					}
 				}
 
@@ -203,15 +213,16 @@ func main() {
 			)
 
 			if bodyUpdated {
-				body = buildBodyShape(bodySize, bodySplits)
+				body, bodyOuterIndexes = buildBodyShape(bodySize, bodySplits)
 			}
 		}
 		rl.EndDrawing()
 	}
 }
 
-func buildBodyShape(size rl.Vector3, splits rl.Vector3) []rl.Vector3 {
+func buildBodyShape(size rl.Vector3, splits rl.Vector3) ([]rl.Vector3, []int) {
 	var body []rl.Vector3
+	var bodyOuterIndexes []int
 	splits = rl.Vector3Scale(splits, 2)
 	offset := rl.NewVector3(size.X/2, 0, size.Z/2)
 
@@ -220,6 +231,11 @@ func buildBodyShape(size rl.Vector3, splits rl.Vector3) []rl.Vector3 {
 			for z := int(splits.Z); z >= 0; z-- {
 				if (x%2 != 0 && z%2 != 0) || (x%2 != 0 && y%2 != 0) || (y%2 != 0 && z%2 != 0) {
 					continue
+				}
+
+				if x == 0 || y == 0 || z == 0 ||
+					x == int(splits.X) || y == int(splits.Y) || z == int(splits.Z) {
+					bodyOuterIndexes = append(bodyOuterIndexes, len(body))
 				}
 
 				body = append(body, rl.Vector3Subtract(rl.NewVector3(
@@ -231,5 +247,5 @@ func buildBodyShape(size rl.Vector3, splits rl.Vector3) []rl.Vector3 {
 		}
 	}
 
-	return body
+	return body, bodyOuterIndexes
 }
