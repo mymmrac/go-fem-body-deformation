@@ -45,3 +45,7 @@ func (i *InputValue[T]) String() string {
 func InputsToVec3[T InputTypes](in [3]*InputValue[T]) rl.Vector3 {
 	return rl.NewVector3(float32(in[0].Value), float32(in[1].Value), float32(in[2].Value))
 }
+
+func InputsToSlice3[T InputTypes](in [3]*InputValue[T]) [3]T {
+	return [3]T{in[0].Value, in[1].Value, in[2].Value}
+}
