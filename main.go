@@ -25,35 +25,25 @@ func main() {
 	cameraOrbiting := false
 	// cameraOrbiting := true // TODO: Reset
 
-	bodySize := rl.NewVector3(4, 4, 4)
-	// bodySize := rl.NewVector3(4, 5, 3) // TODO: Reset
-	bodySizesValue := [3]string{
-		strconv.FormatFloat(float64(bodySize.X), 'f', 2, 64),
-		strconv.FormatFloat(float64(bodySize.Y), 'f', 2, 64),
-		strconv.FormatFloat(float64(bodySize.Z), 'f', 2, 64),
+	// TODO: Reset to [4, 5, 3]
+	bodySize := [3]*InputValue[float64]{
+		NewInputValue(4.0),
+		NewInputValue(4.0),
+		NewInputValue(4.0),
 	}
-	var bodySizesEdit [3]bool
 
-	bodySplits := rl.NewVector3(2, 2, 2)
-	// bodySplits := rl.NewVector3(4, 8, 3) // TODO: Reset
-	bodySplitsValue := [3]string{
-		strconv.FormatFloat(float64(bodySplits.X), 'f', 0, 64),
-		strconv.FormatFloat(float64(bodySplits.Y), 'f', 0, 64),
-		strconv.FormatFloat(float64(bodySplits.Z), 'f', 0, 64),
+	// TODO: Reset to [4, 8, 3]
+	bodySplit := [3]*InputValue[int]{
+		NewInputValue(2),
+		NewInputValue(2),
+		NewInputValue(2),
 	}
-	var bodySplitsEdit [3]bool
 
-	yungaModule := 4.0
-	yungaModuleValue := strconv.FormatFloat(yungaModule, 'f', 2, 64)
-	yungaModuleEdit := false
-	poissonRatio := 0.3
-	poissonRatioValue := strconv.FormatFloat(poissonRatio, 'f', 2, 64)
-	poissonRatioEdit := false
-	pressure := 10.0
-	pressureValue := strconv.FormatFloat(pressure, 'f', 2, 64)
-	pressureEdit := false
+	yungaModule := NewInputValue(4.0)
+	poissonRatio := NewInputValue(0.3)
+	pressure := NewInputValue(10.0)
 
-	body, bodyOuterIndexes := buildBodyShape(bodySize, bodySplits)
+	body, bodyOuterIndexes := buildBodyShape(InputsToVec3(bodySize), InputsToVec3(bodySplit))
 
 	const (
 		inputWidth    = 64
@@ -119,8 +109,9 @@ func main() {
 			{
 				rl.DrawGrid(32, 1)
 
+				bodySizeV := InputsToVec3(bodySize)
 				// rl.DrawCube(rl.NewVector3(0, bodySize.Y/2, 0), bodySize.X, bodySize.Y, bodySize.Z, rl.Red)
-				rl.DrawCubeWires(rl.NewVector3(0, bodySize.Y/2, 0), bodySize.X, bodySize.Y, bodySize.Z, rl.Black)
+				rl.DrawCubeWires(rl.NewVector3(0, bodySizeV.Y/2, 0), bodySizeV.X, bodySizeV.Y, bodySizeV.Z, rl.Black)
 
 				if false {
 					for i, p := range body {
@@ -159,35 +150,18 @@ func main() {
 			for i := range 3 {
 				if gui.TextBox(
 					rl.NewRectangle(padding+(inputWidth+padding)*(float32(i)+0.5), padding, inputWidth, inputHeight),
-					&bodySizesValue[i], inputTextSize, bodySizesEdit[i],
+					&bodySize[i].Text, inputTextSize, bodySize[i].Edit,
 				) {
-					bodySizesEdit[i] = !bodySizesEdit[i]
-
-					v, err := strconv.ParseFloat(bodySizesValue[i], 32)
+					bodySize[i].ToggleEdit()
+					v, err := strconv.ParseFloat(bodySize[i].Text, 32)
 					if err != nil {
 						slog.Error("Invalid size value", "err", err)
 					} else {
 						v = max(min(v, 1000), 0.01)
-						switch i {
-						case 0:
-							bodySize.X = float32(v)
-						case 1:
-							bodySize.Y = float32(v)
-						case 2:
-							bodySize.Z = float32(v)
-						}
+						bodySize[i].Value = v
 						bodyUpdated = true
 					}
-					var sv string
-					switch i {
-					case 0:
-						sv = strconv.FormatFloat(float64(bodySize.X), 'f', 2, 64)
-					case 1:
-						sv = strconv.FormatFloat(float64(bodySize.Y), 'f', 2, 64)
-					case 2:
-						sv = strconv.FormatFloat(float64(bodySize.Z), 'f', 2, 64)
-					}
-					bodySizesValue[i] = sv
+					bodySize[i].UpdateText()
 				}
 			}
 
@@ -196,35 +170,18 @@ func main() {
 			for i := range 3 {
 				if gui.TextBox(
 					rl.NewRectangle(padding+(inputWidth+padding)*(float32(i)+0.5), padding+inputHeight+padding, inputWidth, inputHeight),
-					&bodySplitsValue[i], inputTextSize, bodySplitsEdit[i],
+					&bodySplit[i].Text, inputTextSize, bodySplit[i].Edit,
 				) {
-					bodySplitsEdit[i] = !bodySplitsEdit[i]
-
-					v, err := strconv.ParseInt(bodySplitsValue[i], 10, 32)
+					bodySplit[i].ToggleEdit()
+					v, err := strconv.ParseInt(bodySplit[i].Text, 10, 32)
 					if err != nil {
 						slog.Error("Invalid split value", "err", err, "value", v)
 					} else {
 						v = max(min(v, 100), 1)
-						switch i {
-						case 0:
-							bodySplits.X = float32(v)
-						case 1:
-							bodySplits.Y = float32(v)
-						case 2:
-							bodySplits.Z = float32(v)
-						}
+						bodySplit[i].Value = int(v)
 						bodyUpdated = true
 					}
-					var sv string
-					switch i {
-					case 0:
-						sv = strconv.FormatInt(int64(bodySplits.X), 10)
-					case 1:
-						sv = strconv.FormatInt(int64(bodySplits.Y), 10)
-					case 2:
-						sv = strconv.FormatInt(int64(bodySplits.Z), 10)
-					}
-					bodySplitsValue[i] = sv
+					bodySplit[i].UpdateText()
 				}
 			}
 
@@ -236,53 +193,62 @@ func main() {
 
 			// Young's modulus
 			gui.Label(rl.NewRectangle(bottomLeftUiRect.X+padding, bottomLeftUiRect.Y+padding, inputWidth, inputHeight), "Young's Modulus")
-			if gui.TextBox(rl.NewRectangle(bottomLeftUiRect.X+padding+inputWidth+padding, bottomLeftUiRect.Y+padding, inputWidth, inputHeight), &yungaModuleValue, inputTextSize, yungaModuleEdit) {
-				yungaModuleEdit = !yungaModuleEdit
-
-				v, err := strconv.ParseFloat(yungaModuleValue, 64)
+			if gui.TextBox(
+				rl.NewRectangle(bottomLeftUiRect.X+padding+inputWidth+padding, bottomLeftUiRect.Y+padding, inputWidth, inputHeight),
+				&yungaModule.Text, inputTextSize, yungaModule.Edit,
+			) {
+				yungaModule.ToggleEdit()
+				v, err := strconv.ParseFloat(yungaModule.Text, 64)
 				if err != nil {
 					slog.Error("Invalid Young's modulus value", "err", err)
 				} else {
-					yungaModule = max(min(v, 100000.0), 0.01) // TODO: Validate range
+					yungaModule.Value = max(min(v, 100000.0), 0.01) // TODO: Validate range
 				}
-				yungaModuleValue = strconv.FormatFloat(yungaModule, 'f', 2, 64)
+				yungaModule.UpdateText()
 			}
 
 			// Poisson's ratio
 			gui.Label(rl.NewRectangle(bottomLeftUiRect.X+padding, bottomLeftUiRect.Y+padding+padding+inputHeight, inputWidth, inputHeight), "Poisson's ratio")
-			if gui.TextBox(rl.NewRectangle(bottomLeftUiRect.X+padding+inputWidth+padding, bottomLeftUiRect.Y+padding+padding+inputHeight, inputWidth, inputHeight), &poissonRatioValue, inputTextSize, poissonRatioEdit) {
-				poissonRatioEdit = !poissonRatioEdit
-
-				v, err := strconv.ParseFloat(poissonRatioValue, 64)
+			if gui.TextBox(
+				rl.NewRectangle(bottomLeftUiRect.X+padding+inputWidth+padding, bottomLeftUiRect.Y+padding+padding+inputHeight, inputWidth, inputHeight),
+				&poissonRatio.Text, inputTextSize, poissonRatio.Edit,
+			) {
+				poissonRatio.ToggleEdit()
+				v, err := strconv.ParseFloat(poissonRatio.Text, 64)
 				if err != nil {
 					slog.Error("Invalid Poisson's ratio value", "err", err)
 				} else {
-					poissonRatio = max(min(v, 0.5), 0.0) // TODO: Validate range
+					poissonRatio.Value = max(min(v, 0.5), 0.0) // TODO: Validate range
 				}
-				poissonRatioValue = strconv.FormatFloat(poissonRatio, 'f', 2, 64)
+				poissonRatio.UpdateText()
 			}
 
 			// Pressure
 			gui.Label(rl.NewRectangle(bottomLeftUiRect.X+padding, bottomLeftUiRect.Y+padding+(padding+inputHeight)*2, inputWidth, inputHeight), "Pressure")
-			if gui.TextBox(rl.NewRectangle(bottomLeftUiRect.X+padding+inputWidth+padding, bottomLeftUiRect.Y+padding+(padding+inputHeight)*2, inputWidth, inputHeight), &pressureValue, inputTextSize, pressureEdit) {
-				pressureEdit = !pressureEdit
-
-				v, err := strconv.ParseFloat(pressureValue, 64)
+			if gui.TextBox(
+				rl.NewRectangle(bottomLeftUiRect.X+padding+inputWidth+padding, bottomLeftUiRect.Y+padding+(padding+inputHeight)*2, inputWidth, inputHeight),
+				&pressure.Text, inputTextSize, pressure.Edit,
+			) {
+				pressure.ToggleEdit()
+				v, err := strconv.ParseFloat(pressure.Text, 64)
 				if err != nil {
 					slog.Error("Invalid pressure value", "err", err)
 				} else {
-					pressure = max(min(v, 10000.0), 0.01) // TODO: Validate range
+					pressure.Value = max(min(v, 10000.0), 0.01) // TODO: Validate range
 				}
-				pressureValue = strconv.FormatFloat(pressure, 'f', 2, 64)
+				pressure.UpdateText()
 			}
 
 			if bodyUpdated {
-				body, bodyOuterIndexes = buildBodyShape(bodySize, bodySplits)
+				body, bodyOuterIndexes = buildBodyShape(InputsToVec3(bodySize), InputsToVec3(bodySplit))
 			}
 
 			// Run
-			if gui.Button(rl.NewRectangle(float32(rl.GetScreenWidth())-padding-inputWidth, float32(rl.GetScreenHeight())-padding-inputHeight, inputWidth, inputHeight), "Run") {
-				slog.Info("Running...", "bodySize", bodySize, "bodySplits", bodySplits, "yungaModule", yungaModule, "poissonRatio", poissonRatio, "pressure", pressure)
+			if gui.Button(
+				rl.NewRectangle(float32(rl.GetScreenWidth())-padding-inputWidth, float32(rl.GetScreenHeight())-padding-inputHeight, inputWidth, inputHeight),
+				"Run",
+			) {
+				slog.Info("Running...", "bodySize", InputsToVec3(bodySize), "bodySplits", InputsToVec3(bodySplit), "yungaModule", yungaModule, "poissonRatio", poissonRatio, "pressure", pressure)
 			}
 		}
 		rl.EndDrawing()
