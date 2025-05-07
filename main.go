@@ -262,7 +262,7 @@ func main() {
 			) {
 				slog.Info("Running...", "bodySize", InputsToVec3(bodySize), "bodySplits", InputsToVec3(bodySplit), "yungaModule", yungaModule, "poissonRatio", poissonRatio, "pressure", pressure)
 				fem := &FEM{}
-				fem.Solve(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
+				fem.Solve(InputsToSlice3(bodySize), InputsToSlice3(bodySplit), yungaModule.Value, poissonRatio.Value, pressure.Value)
 			}
 		}
 		rl.EndDrawing()

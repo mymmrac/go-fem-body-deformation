@@ -27,6 +27,8 @@ var localPoints3D = [20][3]int{
 
 var dfiabg [3 * 3 * 3][20][3]float64
 
+var mgeCoefficients = [3]float64{5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0}
+
 func init() {
 	calculateDFIABG()
 }
@@ -95,9 +97,11 @@ type FEM struct {
 	djDet [][27]float64       // Jacobian determinant, npq * 27
 
 	dfixyz [][27][20][3]float64 // Derivative of approximation function in global space, npq * 27 * 20 * 3 (x, y, z)
+
+	mge [][60][60]float64 // Global stiffness matrix, npq * 60 * 60
 }
 
-func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int) {
+func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
 	now := time.Now()
 	defer func() { slog.Info("FEM", "time", time.Since(now)) }()
 
@@ -134,6 +138,15 @@ func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int) {
 		f.dfixyz = append(f.dfixyz, f.createDFIXYZ(dj))
 	}
 	slog.Info("FEM", "DFIXYZ", f.dfixyz)
+
+	l := e / ((1 + nu) * (1 - 2*nu))
+	mu := e / (2 * (1 + nu))
+
+	f.mge = nil
+	for i := range f.elements {
+		f.mge = append(f.mge, f.createMGE(f.dfixyz[i], f.djDet[i], l, nu, mu))
+	}
+	slog.Info("FEM", "MGE", f.mge)
 }
 
 func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
@@ -277,4 +290,71 @@ func (m *matrix) MulVecTo(dst *mat.VecDense, trans bool, x mat.Vector) {
 	} else {
 		dst.MulVec(m.Dense, x)
 	}
+}
+
+func (f *FEM) createMGE(dfixyz [27][20][3]float64, djDet [27]float64, l, nu, mu float64) [60][60]float64 {
+	var matrixA11, matrixA22, matrixA33 [20][20]float64
+	var matrixA12, matrixA13, matrixA23 [20][20]float64
+
+	for i := range 20 {
+		for j := range 20 {
+			index := 0
+
+			var a11, a22, a33 float64
+			var a12, a13, a23 float64
+
+			for _, m := range mgeCoefficients {
+				for _, n := range mgeCoefficients {
+					for _, k := range mgeCoefficients {
+						dfi := dfixyz[index]
+
+						a11 += m * n * k * (l*(1-nu)*(dfi[i][0]*dfi[j][0]) +
+							mu*((dfi[i][1]*dfi[j][1])+(dfi[i][2]*dfi[j][2]))) * djDet[index]
+
+						a22 += m * n * k * (l*(1-nu)*(dfi[i][1]*dfi[j][1]) +
+							mu*((dfi[i][0]*dfi[j][0])+(dfi[i][2]*dfi[j][2]))) * djDet[index]
+
+						a33 += m * n * k * (l*(1-nu)*(dfi[i][2]*dfi[j][2]) +
+							mu*((dfi[i][0]*dfi[j][0])+(dfi[i][1]*dfi[j][1]))) * djDet[index]
+
+						a12 += m * n * k * (l*nu*(dfi[i][0]*dfi[j][1]) +
+							mu*(dfi[i][1]*dfi[j][0])) * djDet[index]
+
+						a13 += m * n * k * (l*nu*(dfi[i][0]*dfi[j][2]) +
+							mu*(dfi[i][2]*dfi[j][0])) * djDet[index]
+
+						a23 += m * n * k * (l*nu*(dfi[i][1]*dfi[j][2]) +
+							mu*(dfi[i][2]*dfi[j][1])) * djDet[index]
+
+						index++
+					}
+				}
+			}
+
+			matrixA11[i][j] = a11
+			matrixA22[i][j] = a22
+			matrixA33[i][j] = a33
+			matrixA12[i][j] = a12
+			matrixA13[i][j] = a13
+			matrixA23[i][j] = a23
+		}
+	}
+
+	var mge [60][60]float64
+	for i := 0; i < 20; i++ {
+		for j := 0; j < 20; j++ {
+			mge[i][j] = matrixA11[i][j]
+			mge[i][20+j] = matrixA12[i][j]
+			mge[i][40+j] = matrixA13[i][j]
+
+			mge[20+i][j] = matrixA12[j][i]
+			mge[20+i][20+j] = matrixA22[i][j]
+			mge[20+i][40+j] = matrixA23[i][j]
+
+			mge[40+i][j] = matrixA13[j][i]
+			mge[40+i][20+j] = matrixA23[j][i]
+			mge[40+i][40+j] = matrixA33[i][j]
+		}
+	}
+	return mge
 }
