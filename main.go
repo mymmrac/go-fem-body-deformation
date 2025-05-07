@@ -45,11 +45,11 @@ func main() {
 
 	body, bodyOuterIndexes := buildBodyShape(InputsToVec3(bodySize), InputsToVec3(bodySplit))
 
-	const (
-		inputWidth    = 64
-		inputHeight   = 24
-		inputTextSize = 20
-		padding       = 8
+	const inputTextSize = 20
+	var (
+		inputWidth  float32 = 64.0
+		inputHeight float32 = 24.0
+		padding     float32 = 8.0
 	)
 
 	a0 := rl.NewVector3(0, 0, 0)
@@ -99,6 +99,18 @@ func main() {
 		}
 		if rl.IsKeyPressed(rl.KeyKpAdd) {
 			rl.CameraMoveToTarget(&camera, -2.0)
+		}
+
+		const scaleFactor = 0.95
+		if rl.IsKeyPressed(rl.KeyMinus) {
+			inputWidth *= scaleFactor
+			inputHeight *= scaleFactor
+			padding *= scaleFactor
+		}
+		if rl.IsKeyPressed(rl.KeyEqual) {
+			inputWidth /= scaleFactor
+			inputHeight /= scaleFactor
+			padding /= scaleFactor
 		}
 
 		rl.BeginDrawing()
