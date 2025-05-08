@@ -33,13 +33,13 @@ type FEM struct {
 	u []float64 // Displacements, npq * 3 (x, y, z)
 }
 
-func (f *FEM) BuildElements(bodySize [3]float64, bodySplit [3]int) [][3]float64 {
-	f.fillElements(bodySize, bodySplit)
+func (f *FEM) BuildElements(bodySize [3]float64, bodySplit [3]int) ([][3]float64, map[[3]int]int) {
+	indexMap := f.fillElements(bodySize, bodySplit)
 	slog.Info("FEM", "elements", f.elements)
 	slog.Info("FEM", "AKT", f.akt)
 	slog.Info("FEM", "NT", f.nt)
 
-	return f.akt
+	return f.akt, indexMap
 }
 
 func (f *FEM) ChoseConditions(bodySplit [3]int) {
@@ -149,7 +149,7 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 	return dAKT
 }
 
-func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
+func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) map[[3]int]int {
 	stepA := bodySize[0] / float64(bodySplit[0])
 	stepB := bodySize[1] / float64(bodySplit[1])
 	stepC := bodySize[2] / float64(bodySplit[2])
@@ -168,15 +168,18 @@ func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
 	}
 
 	f.akt = nil
+	indexMapping := make(map[[3]int]int)
 	for k := range 2*bodySplit[2] + 1 {
 		if k%2 == 0 {
 			for j := range 2*bodySplit[1] + 1 {
 				if j%2 == 0 {
 					for i := range 2*bodySplit[0] + 1 {
+						indexMapping[[3]int{i, j, k}] = len(f.akt)
 						f.akt = append(f.akt, [3]float64{float64(i) * stepA / 2, float64(j) * stepB / 2, float64(k) * stepC / 2})
 					}
 				} else {
 					for i := range bodySplit[0] + 1 {
+						indexMapping[[3]int{i * 2, j, k}] = len(f.akt)
 						f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB / 2, float64(k) * stepC / 2})
 					}
 				}
@@ -184,6 +187,7 @@ func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
 		} else {
 			for j := range bodySplit[1] + 1 {
 				for i := range bodySplit[0] + 1 {
+					indexMapping[[3]int{i * 2, j * 2, k}] = len(f.akt)
 					f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB, float64(k) * stepC / 2})
 				}
 			}
@@ -198,6 +202,8 @@ func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
 		}
 		f.nt = append(f.nt, ntCube)
 	}
+
+	return indexMapping
 }
 
 func (f *FEM) createCube(aStart, aEnd, bStart, bEnd, cStart, cEnd float64) [20][3]float64 {

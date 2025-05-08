@@ -49,7 +49,7 @@ func main() {
 	pressure := NewInputValue(10.0)
 
 	fem := &FEM{}
-	body := fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
+	body, bodyIndexes := fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
 	var deformedBody [][3]float64
 
 	const inputTextSize = 20
@@ -130,9 +130,9 @@ func main() {
 				origin := rl.Vector3Scale(InputsToVec3(bodySize), 0.5)
 				origin.Y = 0
 
-				drawBody(body, origin, rl.Gray, rl.Blue, showNumbers)
+				drawBody(body, bodyIndexes, origin, rl.Gray, rl.Blue, showNumbers)
 				if deformedBody != nil {
-					drawBody(deformedBody, origin, rl.Red, rl.Green, false)
+					drawBody(deformedBody, bodyIndexes, origin, rl.Red, rl.Green, false)
 				}
 
 				const thickness = 0.02
@@ -245,7 +245,7 @@ func main() {
 			}
 
 			if bodyUpdated {
-				body = fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
+				body, bodyIndexes = fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
 				deformedBody = nil
 			}
 
@@ -267,7 +267,30 @@ func main() {
 	}
 }
 
-func drawBody(body [][3]float64, origin rl.Vector3, edgesColor, verticesColor rl.Color, showNumbers bool) {
+func drawBody(body [][3]float64, bodyIndexes map[[3]int]int, origin rl.Vector3, edgesColor, verticesColor rl.Color, showNumbers bool) {
+	for key, idx := range bodyIndexes {
+		p1 := body[idx]
+		pv1 := rl.Vector3Subtract(rl.NewVector3(float32(p1[0]), float32(p1[1]), float32(p1[2])), origin)
+
+		i, j, k := key[0], key[1], key[2]
+		for _, delta := range [][3]int{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} {
+			ni, nj, nk := i+delta[0], j+delta[1], k+delta[2]
+			neighborKey := [3]int{ni, nj, nk}
+			if nIdx, ok := bodyIndexes[neighborKey]; ok {
+				p2 := body[nIdx]
+				pv2 := rl.Vector3Subtract(rl.NewVector3(float32(p2[0]), float32(p2[1]), float32(p2[2])), origin)
+				rl.DrawLine3D(pv1, pv2, edgesColor)
+			}
+		}
+	}
+
+	// for key, idx := range bodyIndexes {
+	// 	p1 := body[idx]
+	// 	pv1 := rl.Vector3Subtract(rl.NewVector3(float32(p1[0]), float32(p1[1]), float32(p1[2])), origin)
+	// 	// i, j, k := key[0], key[1], key[2]
+	// 	rl.DrawBillboard(camera, numbers[key[2]+1], rl.Vector3Add(pv1, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+	// }
+
 	for i, point := range body {
 		p := rl.Vector3Subtract(rl.NewVector3(float32(point[0]), float32(point[1]), float32(point[2])), origin)
 		rl.DrawCube(p, 0.1, 0.1, 0.1, verticesColor)
