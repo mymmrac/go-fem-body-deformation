@@ -28,10 +28,12 @@ type FEM struct {
 	fe [][60]float64 // Forces on elements, npq * 60
 
 	mg [][]float64 // Global stiffness matrix, ?? * ??
-	f  []float64   // Forces, ??
+	f  []float64   // Forces, npq * 3 (x, y, z)
+
+	u []float64 // Displacements, npq * 3 (x, y, z)
 }
 
-func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
+func (f *FEM) ApplyForce(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) [][3]float64 {
 	now := time.Now()
 	defer func() { slog.Info("FEM", "time", time.Since(now)) }()
 
@@ -111,6 +113,34 @@ func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
 
 	f.f = f.calculateF()
 	slog.Info("FEM", "F", f.f)
+
+	flatMG := make([]float64, 0, len(f.mg)*len(f.mg[0]))
+	for i := range f.mg {
+		flatMG = append(flatMG, f.mg[i]...)
+	}
+	a := mat.NewDense(len(f.mg), len(f.mg[0]), flatMG)
+	b := mat.NewVecDense(len(f.f), f.f)
+
+	uVec, err := linsolve.Iterative(&matrix{Dense: a}, b, &linsolve.CG{}, nil)
+	if err != nil {
+		panic(err)
+	}
+	f.u = uVec.X.RawVector().Data
+	slog.Info("FEM", "U", f.u)
+
+	dAKT := slices.Clone(f.akt)
+	for i, u := range f.u {
+		j := i / 3
+		if (i+1)%3 == 1 {
+			dAKT[j][0] = f.akt[j][0] + u
+		} else if (i+1)%3 == 2 {
+			dAKT[j][1] = f.akt[j][1] + u
+		} else {
+			dAKT[j][2] = f.akt[j][2] + u
+		}
+	}
+
+	return dAKT
 }
 
 func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
