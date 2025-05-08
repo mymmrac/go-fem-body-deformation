@@ -104,7 +104,8 @@ func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
 		f.fe = append(f.fe, f.calculateFE(p, zp))
 	}
 
-	f.mg = nil
+	f.mg = f.calculateMG()
+	slog.Info("FEM", "MG", f.mg)
 }
 
 func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
@@ -390,4 +391,57 @@ func (f *FEM) dXYZdNT(points [][3]float64) [3 * 3][3][2]float64 {
 		}
 	}
 	return dXYZdNT
+}
+
+func (f *FEM) calculateMG() [][]float64 {
+	mg := make([][]float64, 3*len(f.akt))
+	for i := 0; i < len(mg); i++ {
+		mg[i] = make([]float64, 3*len(f.akt))
+	}
+
+	for k, mge := range f.mge {
+		for j := range 60 {
+			for i := range 60 {
+				var iForNT, xyzCoordI int
+				if i < 20 {
+					iForNT = i
+					xyzCoordI = 0
+				} else if i < 40 {
+					iForNT = i - 20
+					xyzCoordI = 1
+				} else {
+					iForNT = i - 40
+					xyzCoordI = 2
+				}
+
+				var jForNT, xyzCoordJ int
+				if j < 20 {
+					jForNT = j
+					xyzCoordJ = 0
+				} else if j < 40 {
+					jForNT = j - 20
+					xyzCoordJ = 1
+				} else {
+					jForNT = j - 40
+					xyzCoordJ = 2
+				}
+
+				mgI := 3*f.nt[k][iForNT] + xyzCoordI
+				mgJ := 3*f.nt[k][jForNT] + xyzCoordJ
+				mg[mgJ][mgI] += mge[j][i]
+			}
+		}
+	}
+
+	// TODO: Is this right? Just by index of ZU?
+	for i := range f.zu {
+		ix := 3*i + 0
+		iy := 3*i + 1
+		iz := 3*i + 2
+		mg[ix][ix] = 1e16
+		mg[iy][iy] = 1e16
+		mg[iz][iz] = 1e16
+	}
+
+	return mg
 }
