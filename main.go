@@ -8,6 +8,11 @@ import (
 	rl "github.com/gen2brain/raylib-go/raylib"
 )
 
+var (
+	camera  rl.Camera3D
+	numbers []rl.Texture2D
+)
+
 func main() {
 	rl.InitWindow(960, 540, "Body Deformation")
 	defer rl.CloseWindow()
@@ -15,7 +20,7 @@ func main() {
 	rl.SetTargetFPS(60)
 	rl.SetWindowState(rl.FlagWindowResizable)
 
-	camera := rl.NewCamera3D(
+	camera = rl.NewCamera3D(
 		rl.NewVector3(10, 10, 10),
 		rl.NewVector3(0, 0, 0),
 		rl.NewVector3(0, 1, 0),
@@ -43,7 +48,9 @@ func main() {
 	poissonRatio := NewInputValue(0.3)
 	pressure := NewInputValue(10.0)
 
-	body, bodyOuterIndexes := buildBodyShape(InputsToVec3(bodySize), InputsToVec3(bodySplit))
+	fem := &FEM{}
+	body := fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
+	var deformedBody [][3]float64
 
 	const inputTextSize = 20
 	var (
@@ -58,14 +65,11 @@ func main() {
 	aZ := rl.NewVector3(0, 0, 1)
 
 	showNumbers := false
-	var numbers []rl.Texture2D
 	for i := range 1 << 11 {
 		textImage := rl.ImageTextEx(rl.GetFontDefault(), strconv.Itoa(i), 32, 4, rl.White)
 		numbers = append(numbers, rl.LoadTextureFromImage(textImage))
 		rl.UnloadImage(textImage)
 	}
-
-	fem := &FEM{}
 
 	for !rl.WindowShouldClose() {
 		topLeftUiRect := rl.NewRectangle(
@@ -123,25 +127,12 @@ func main() {
 			{
 				rl.DrawGrid(32, 1)
 
-				bodySizeV := InputsToVec3(bodySize)
-				// rl.DrawCube(rl.NewVector3(0, bodySize.Y/2, 0), bodySize.X, bodySize.Y, bodySize.Z, rl.Red)
-				rl.DrawCubeWires(rl.NewVector3(0, bodySizeV.Y/2, 0), bodySizeV.X, bodySizeV.Y, bodySizeV.Z, rl.Black)
+				origin := rl.Vector3Scale(InputsToVec3(bodySize), 0.5)
+				origin.Y = 0
 
-				if false {
-					for i, p := range body {
-						rl.DrawCube(p, 0.1, 0.1, 0.1, rl.Blue)
-						if showNumbers {
-							rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
-						}
-					}
-				} else {
-					for _, i := range bodyOuterIndexes {
-						p := body[i]
-						rl.DrawCube(p, 0.1, 0.1, 0.1, rl.Blue)
-						if showNumbers {
-							rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
-						}
-					}
+				drawBody(body, origin, rl.Gray, rl.Blue, showNumbers)
+				if deformedBody != nil {
+					drawBody(deformedBody, origin, rl.Red, rl.Green, false)
 				}
 
 				const thickness = 0.02
@@ -254,7 +245,8 @@ func main() {
 			}
 
 			if bodyUpdated {
-				body, bodyOuterIndexes = buildBodyShape(InputsToVec3(bodySize), InputsToVec3(bodySplit))
+				body = fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
+				deformedBody = nil
 			}
 
 			// Run
@@ -262,43 +254,25 @@ func main() {
 				rl.NewRectangle(float32(rl.GetScreenWidth())-padding-inputWidth, float32(rl.GetScreenHeight())-padding-inputHeight, inputWidth, inputHeight),
 				"Run",
 			) {
-				slog.Info("Running...", "bodySize", InputsToVec3(bodySize), "bodySplits", InputsToVec3(bodySplit), "yungaModule", yungaModule, "poissonRatio", poissonRatio, "pressure", pressure)
-
-				_ = fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
+				slog.Info("Running...",
+					"bodySize", InputsToVec3(bodySize),
+					"bodySplits", InputsToVec3(bodySplit),
+					"yungaModule", yungaModule, "poissonRatio", poissonRatio, "pressure", pressure,
+				)
 				fem.ChoseConditions(InputsToSlice3(bodySplit))
-				_ = fem.ApplyForce(yungaModule.Value, poissonRatio.Value, pressure.Value)
+				deformedBody = fem.ApplyForce(yungaModule.Value, poissonRatio.Value, pressure.Value)
 			}
 		}
 		rl.EndDrawing()
 	}
 }
 
-func buildBodyShape(size rl.Vector3, splits rl.Vector3) ([]rl.Vector3, []int) {
-	var body []rl.Vector3
-	var bodyOuterIndexes []int
-	splits = rl.Vector3Scale(splits, 2)
-	offset := rl.NewVector3(size.X/2, 0, size.Z/2)
-
-	for y := range int(splits.Y) + 1 {
-		for x := int(splits.X); x >= 0; x-- {
-			for z := int(splits.Z); z >= 0; z-- {
-				if (x%2 != 0 && z%2 != 0) || (x%2 != 0 && y%2 != 0) || (y%2 != 0 && z%2 != 0) {
-					continue
-				}
-
-				if x == 0 || y == 0 || z == 0 ||
-					x == int(splits.X) || y == int(splits.Y) || z == int(splits.Z) {
-					bodyOuterIndexes = append(bodyOuterIndexes, len(body))
-				}
-
-				body = append(body, rl.Vector3Subtract(rl.NewVector3(
-					(float32(x)*size.X)/splits.X,
-					(float32(y)*size.Y)/splits.Y,
-					(float32(z)*size.Z)/splits.Z,
-				), offset))
-			}
+func drawBody(body [][3]float64, origin rl.Vector3, edgesColor, verticesColor rl.Color, showNumbers bool) {
+	for i, point := range body {
+		p := rl.Vector3Subtract(rl.NewVector3(float32(point[0]), float32(point[1]), float32(point[2])), origin)
+		rl.DrawCube(p, 0.1, 0.1, 0.1, verticesColor)
+		if showNumbers {
+			rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
 		}
 	}
-
-	return body, bodyOuterIndexes
 }
