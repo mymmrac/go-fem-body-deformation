@@ -10,95 +10,24 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-var gaussian = [3]float64{-math.Sqrt(0.6), 0, math.Sqrt(0.6)}
-
-var localPoints2D = [20][2]int{
-	{-1, -1}, {1, -1}, {1, 1}, {-1, 1},
-	{0, -1}, {1, 0}, {0, 1}, {-1, 0},
-}
-
-var localPoints3D = [20][3]int{
-	{-1, 1, -1}, {1, 1, -1}, {1, -1, -1}, {-1, -1, -1},
-	{-1, 1, 1}, {1, 1, 1}, {1, -1, 1}, {-1, -1, 1},
-	{0, 1, -1}, {1, 0, -1}, {0, -1, -1}, {-1, 0, -1},
-	{-1, 1, 0}, {1, 1, 0}, {1, -1, 0}, {-1, -1, 0},
-	{0, 1, 1}, {1, 0, 1}, {0, -1, 1}, {-1, 0, 1},
-}
-
-var dfiabg [3 * 3 * 3][20][3]float64
-
-var mgeCoefficients = [3]float64{5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0}
-
-func init() {
-	calculateDFIABG()
-}
-
-func calculateDFIABG() {
-	for k1, gamma := range gaussian {
-		for k2, beta := range gaussian {
-			for k3, alpha := range gaussian {
-				for i, point := range localPoints3D {
-					if i <= 7 {
-						dfiabg[k1*9+k2*3+k3][i] = dfiabg18(alpha, beta, gamma, point[0], point[1], point[2])
-					} else {
-						dfiabg[k1*9+k2*3+k3][i] = dfiabg14(alpha, beta, gamma, point[0], point[1], point[2])
-					}
-				}
-			}
-		}
-	}
-}
-
-func dfiabg18(alpha, beta, gamma float64, alphaI, betaI, gammaI int) [3]float64 {
-	return [3]float64{
-		(1.0 / 8.0) * (1 + beta*float64(betaI)) * (1 + gamma*float64(gammaI)) *
-			(float64(alphaI)*(-2+alpha*float64(alphaI)+gamma*float64(gammaI)+beta*float64(betaI)) +
-				float64(alphaI)*(1+alpha*float64(alphaI))),
-		(1.0 / 8.0) * (1 + alpha*float64(alphaI)) * (1 + gamma*float64(gammaI)) *
-			(float64(betaI)*(-2+alpha*float64(alphaI)+gamma*float64(gammaI)+beta*float64(betaI)) +
-				float64(betaI)*(1+beta*float64(betaI))),
-		(1.0 / 8.0) * (1 + beta*float64(betaI)) * (1 + alpha*float64(alphaI)) *
-			(float64(gammaI)*(-2+alpha*float64(alphaI)+gamma*float64(gammaI)+beta*float64(betaI)) +
-				float64(gammaI)*(1+gamma*float64(gammaI))),
-	}
-}
-
-func dfiabg14(alpha, beta, gamma float64, alphaI, betaI, gammaI int) [3]float64 {
-	return [3]float64{
-		(1.0 / 4.0) * (1 + beta*float64(betaI)) * (1 + gamma*float64(gammaI)) *
-			(float64(alphaI)*(-float64(betaI)*float64(betaI)*float64(gammaI)*float64(gammaI)*
-				alpha*alpha-beta*beta*float64(gammaI)*float64(gammaI)*float64(alphaI)*float64(alphaI)-
-				float64(betaI)*float64(betaI)*gamma*gamma*float64(alphaI)*float64(alphaI)+1) -
-				(2*float64(betaI)*float64(betaI)*float64(gammaI)*float64(gammaI)*alpha)*(alpha*float64(alphaI)+1)),
-
-		(1.0 / 4.0) * (1 + alpha*float64(alphaI)) * (1 + gamma*float64(gammaI)) *
-			(float64(betaI)*(-float64(betaI)*float64(betaI)*float64(gammaI)*float64(gammaI)*
-				alpha*alpha-beta*beta*float64(gammaI)*float64(gammaI)*float64(alphaI)*float64(alphaI)-
-				float64(betaI)*float64(betaI)*gamma*gamma*float64(alphaI)*float64(alphaI)+1) -
-				(2*beta*float64(gammaI)*float64(gammaI)*float64(alphaI)*float64(alphaI))*(float64(betaI)*beta+1)),
-
-		(1.0 / 4.0) * (1 + beta*float64(betaI)) * (1 + alpha*float64(alphaI)) *
-			(float64(gammaI)*(-float64(betaI)*float64(betaI)*float64(gammaI)*float64(gammaI)*
-				alpha*alpha-beta*beta*float64(gammaI)*float64(gammaI)*float64(alphaI)*float64(alphaI)-
-				float64(betaI)*float64(betaI)*gamma*gamma*float64(alphaI)*float64(alphaI)+1) -
-				(2*float64(betaI)*float64(betaI)*gamma*float64(alphaI)*float64(alphaI))*(gamma*float64(gammaI)+1)),
-	}
-}
-
 type FEM struct {
 	elements [][20][3]float64 // Coords of grid vertices in local space, npq * 20 * 3 (x, y, z)
 	akt      [][3]float64     // Coords of grid vertices in global space, npq * 3 (x, y, z)
 	nt       [][20]int        // Local element indexes, npq * 20
 
-	zu []int // Fixed points
-	zp []int // Pushed points
+	zu [][3]float64   // Fixed points, ?? * 3 (x, y, z)
+	zp [][][3]float64 // Pushed points, ?? * ?? * 3 (x, y, z)
 
 	dj    [][27][3][3]float64 // Jacobian matrix, npq * 27 * 3 (a, b, g) * 3 (x, y, z)
 	djDet [][27]float64       // Jacobian determinant, npq * 27
 
 	dfixyz [][27][20][3]float64 // Derivative of approximation function in global space, npq * 27 * 20 * 3 (x, y, z)
 
-	mge [][60][60]float64 // Global stiffness matrix, npq * 60 * 60
+	mge [][60][60]float64 // Global stiffness matrix for elements, npq * 60 * 60
+
+	fe [][60]float64 // Forces on elements, npq * 60
+
+	mg [][]float64 // Global stiffness matrix, ?? * ??
 }
 
 func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
@@ -106,6 +35,8 @@ func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
 	defer func() { slog.Info("FEM", "time", time.Since(now)) }()
 
 	slog.Info("FME", "DFIABG", dfiabg)
+	slog.Info("FME", "DEPSITE", depsite)
+	slog.Info("FME", "DEPSIxyzDEnt", depsiXYZdeNT)
 
 	f.fillElements(bodySize, bodySplit)
 	slog.Info("FEM", "elements", f.elements)
@@ -147,6 +78,33 @@ func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
 		f.mge = append(f.mge, f.createMGE(f.dfixyz[i], f.djDet[i], l, nu, mu))
 	}
 	slog.Info("FEM", "MGE", f.mge)
+
+	// TODO: Input from UI
+	f.zu = nil
+	for _, point := range f.akt {
+		if point[2] == 0 {
+			f.zu = append(f.zu, point)
+		}
+	}
+	slog.Info("FEM", "ZU", f.zu)
+
+	// TODO: Input from UI
+	f.zp = nil
+	allEl := len(f.elements) - 1
+	for i := range bodySplit[0] * bodySplit[1] {
+		f.zp = append(f.zp, f.choseCubePoints(f.elements[allEl-i], 6, 2))
+	}
+	slog.Info("FEM", "ZP", f.zp)
+
+	f.fe = nil
+	for range len(f.nt) - len(f.zp) {
+		f.fe = append(f.fe, [60]float64{})
+	}
+	for _, zp := range f.zp {
+		f.fe = append(f.fe, f.calculateFE(p, zp))
+	}
+
+	f.mg = nil
 }
 
 func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
@@ -230,7 +188,7 @@ func (f *FEM) createCube(aStart, aEnd, bStart, bEnd, cStart, cEnd float64) [20][
 
 func (f *FEM) createDJ(cube [20][3]float64) [27][3][3]float64 {
 	var dj [27][3][3]float64
-	for i := range 27 {
+	for i := range 3 * 3 * 3 {
 		var sumXA, sumXB, sumXG float64
 		var sumYA, sumYB, sumYG float64
 		var sumZA, sumZB, sumZG float64
@@ -357,4 +315,79 @@ func (f *FEM) createMGE(dfixyz [27][20][3]float64, djDet [27]float64, l, nu, mu 
 		}
 	}
 	return mge
+}
+
+func (f *FEM) choseCubePoints(cube [20][3]float64, side, sideOfAxis int) [][3]float64 {
+	var coordValue float64
+	if side%2 == 1 {
+		coordValue = math.MaxFloat64
+		for _, point := range cube {
+			coordValue = min(point[sideOfAxis], coordValue)
+		}
+	} else {
+		coordValue = -math.MaxFloat64
+		for _, point := range cube {
+			coordValue = max(point[sideOfAxis], coordValue)
+		}
+	}
+
+	var points [][3]float64
+	for _, point := range cube {
+		if point[sideOfAxis] == coordValue {
+			points = append(points, point)
+		}
+	}
+	return points
+}
+
+func (f *FEM) calculateFE(p float64, zp [][3]float64) [60]float64 {
+	dXYZdNT := f.dXYZdNT(zp)
+	var fe1, fe2, fe3 [8]float64
+
+	for i := range 8 {
+		index := 0
+		for _, m := range mgeCoefficients {
+			for _, n := range mgeCoefficients {
+				dXYZdNTItem := dXYZdNT[index]
+				depsiXYZdeNTItem := depsiXYZdeNT[index][i]
+				fe1[i] += m * n * p * (dXYZdNTItem[1][0]*dXYZdNTItem[2][1] - dXYZdNTItem[2][0]*dXYZdNTItem[1][1]) * depsiXYZdeNTItem
+				fe2[i] += m * n * p * (dXYZdNTItem[2][0]*dXYZdNTItem[0][1] - dXYZdNTItem[0][0]*dXYZdNTItem[2][1]) * depsiXYZdeNTItem
+				fe3[i] += m * n * p * (dXYZdNTItem[0][0]*dXYZdNTItem[1][1] - dXYZdNTItem[1][0]*dXYZdNTItem[0][1]) * depsiXYZdeNTItem
+				index++
+			}
+		}
+	}
+
+	return [60]float64{
+		0, 0, 0, 0, fe1[0], fe1[1], fe1[2], fe1[3], 0, 0,
+		0, 0, 0, 0, 0, 0, fe1[4], fe1[5], fe1[6], fe1[7],
+		0, 0, 0, 0, fe2[0], fe2[1], fe2[2], fe2[3], 0, 0,
+		0, 0, 0, 0, 0, 0, fe2[4], fe2[5], fe2[6], fe2[7],
+		0, 0, 0, 0, fe3[0], fe3[1], fe3[2], fe3[3], 0, 0,
+		0, 0, 0, 0, 0, 0, fe3[4], fe3[5], fe3[6], fe3[7],
+	}
+}
+
+func (f *FEM) dXYZdNT(points [][3]float64) [3 * 3][3][2]float64 {
+	var dXYZdNT [9][3][2]float64
+	for i := range 3 * 3 {
+		var sumXEta, sumYEta, sumZEta float64
+		var sumXTau, sumYTau, sumZTau float64
+
+		for j, point := range points {
+			sumXEta += point[0] * depsite[i][j][0]
+			sumYEta += point[1] * depsite[i][j][0]
+			sumZEta += point[2] * depsite[i][j][0]
+			sumXTau += point[0] * depsite[i][j][1]
+			sumYTau += point[1] * depsite[i][j][1]
+			sumZTau += point[2] * depsite[i][j][1]
+		}
+
+		dXYZdNT[i] = [3][2]float64{
+			{sumXEta, sumXTau},
+			{sumYEta, sumYTau},
+			{sumZEta, sumZTau},
+		}
+	}
+	return dXYZdNT
 }
