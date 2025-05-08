@@ -65,6 +65,8 @@ func main() {
 		rl.UnloadImage(textImage)
 	}
 
+	fem := &FEM{}
+
 	for !rl.WindowShouldClose() {
 		topLeftUiRect := rl.NewRectangle(
 			0, 0,
@@ -261,8 +263,10 @@ func main() {
 				"Run",
 			) {
 				slog.Info("Running...", "bodySize", InputsToVec3(bodySize), "bodySplits", InputsToVec3(bodySplit), "yungaModule", yungaModule, "poissonRatio", poissonRatio, "pressure", pressure)
-				fem := &FEM{}
-				fem.ApplyForce(InputsToSlice3(bodySize), InputsToSlice3(bodySplit), yungaModule.Value, poissonRatio.Value, pressure.Value)
+
+				_ = fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
+				fem.ChoseConditions(InputsToSlice3(bodySplit))
+				_ = fem.ApplyForce(yungaModule.Value, poissonRatio.Value, pressure.Value)
 			}
 		}
 		rl.EndDrawing()

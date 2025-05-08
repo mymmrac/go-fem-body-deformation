@@ -33,18 +33,41 @@ type FEM struct {
 	u []float64 // Displacements, npq * 3 (x, y, z)
 }
 
-func (f *FEM) ApplyForce(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) [][3]float64 {
+func (f *FEM) BuildElements(bodySize [3]float64, bodySplit [3]int) [][3]float64 {
+	f.fillElements(bodySize, bodySplit)
+	slog.Info("FEM", "elements", f.elements)
+	slog.Info("FEM", "AKT", f.akt)
+	slog.Info("FEM", "NT", f.nt)
+
+	return f.akt
+}
+
+func (f *FEM) ChoseConditions(bodySplit [3]int) {
+	// TODO: Input from UI
+	f.zu = nil
+	for _, point := range f.akt {
+		if point[2] == 0 {
+			f.zu = append(f.zu, point)
+		}
+	}
+	slog.Info("FEM", "ZU", f.zu)
+
+	// TODO: Input from UI
+	f.zp = nil
+	allEl := len(f.elements) - 1
+	for i := range bodySplit[0] * bodySplit[1] {
+		f.zp = append(f.zp, f.choseCubePoints(f.elements[allEl-i], 6, 2))
+	}
+	slog.Info("FEM", "ZP", f.zp)
+}
+
+func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 	now := time.Now()
 	defer func() { slog.Info("FEM", "time", time.Since(now)) }()
 
 	slog.Info("FME", "DFIABG", dfiabg)
 	slog.Info("FME", "DEPSITE", depsite)
 	slog.Info("FME", "DEPSIxyzDEnt", depsiXYZdeNT)
-
-	f.fillElements(bodySize, bodySplit)
-	slog.Info("FEM", "elements", f.elements)
-	slog.Info("FEM", "AKT", f.akt)
-	slog.Info("FEM", "NT", f.nt)
 
 	f.dj = nil
 	for _, cube := range f.elements {
@@ -81,23 +104,6 @@ func (f *FEM) ApplyForce(bodySize [3]float64, bodySplit [3]int, e, nu, p float64
 		f.mge = append(f.mge, f.createMGE(f.dfixyz[i], f.djDet[i], l, nu, mu))
 	}
 	slog.Info("FEM", "MGE", f.mge)
-
-	// TODO: Input from UI
-	f.zu = nil
-	for _, point := range f.akt {
-		if point[2] == 0 {
-			f.zu = append(f.zu, point)
-		}
-	}
-	slog.Info("FEM", "ZU", f.zu)
-
-	// TODO: Input from UI
-	f.zp = nil
-	allEl := len(f.elements) - 1
-	for i := range bodySplit[0] * bodySplit[1] {
-		f.zp = append(f.zp, f.choseCubePoints(f.elements[allEl-i], 6, 2))
-	}
-	slog.Info("FEM", "ZP", f.zp)
 
 	f.fe = nil
 	for range len(f.nt) - len(f.zp) {
