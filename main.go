@@ -272,6 +272,9 @@ func drawBody(body [][3]float64, bodyIndexes map[[3]int]int, origin rl.Vector3, 
 		p1 := body[idx]
 		pv1 := rl.Vector3Subtract(rl.NewVector3(float32(p1[0]), float32(p1[1]), float32(p1[2])), origin)
 
+		const vertexSize = 0.07
+		rl.DrawCube(pv1, vertexSize, vertexSize, vertexSize, verticesColor)
+
 		i, j, k := key[0], key[1], key[2]
 		for _, delta := range [][3]int{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} {
 			ni, nj, nk := i+delta[0], j+delta[1], k+delta[2]
@@ -282,20 +285,9 @@ func drawBody(body [][3]float64, bodyIndexes map[[3]int]int, origin rl.Vector3, 
 				rl.DrawLine3D(pv1, pv2, edgesColor)
 			}
 		}
-	}
 
-	// for key, idx := range bodyIndexes {
-	// 	p1 := body[idx]
-	// 	pv1 := rl.Vector3Subtract(rl.NewVector3(float32(p1[0]), float32(p1[1]), float32(p1[2])), origin)
-	// 	// i, j, k := key[0], key[1], key[2]
-	// 	rl.DrawBillboard(camera, numbers[key[2]+1], rl.Vector3Add(pv1, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
-	// }
-
-	for i, point := range body {
-		p := rl.Vector3Subtract(rl.NewVector3(float32(point[0]), float32(point[1]), float32(point[2])), origin)
-		rl.DrawCube(p, 0.1, 0.1, 0.1, verticesColor)
 		if showNumbers {
-			rl.DrawBillboard(camera, numbers[i+1], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+			rl.DrawBillboard(camera, numbers[idx+1], rl.Vector3Add(pv1, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
 		}
 	}
 }

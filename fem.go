@@ -174,12 +174,16 @@ func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) map[[3]int]int
 			for j := range 2*bodySplit[1] + 1 {
 				if j%2 == 0 {
 					for i := range 2*bodySplit[0] + 1 {
-						indexMapping[[3]int{i, j, k}] = len(f.akt)
+						if i == 0 || j == 0 || k == 0 || i == 2*bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
+							indexMapping[[3]int{i, j, k}] = len(f.akt)
+						}
 						f.akt = append(f.akt, [3]float64{float64(i) * stepA / 2, float64(j) * stepB / 2, float64(k) * stepC / 2})
 					}
 				} else {
 					for i := range bodySplit[0] + 1 {
-						indexMapping[[3]int{i * 2, j, k}] = len(f.akt)
+						if i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
+							indexMapping[[3]int{i * 2, j, k}] = len(f.akt)
+						}
 						f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB / 2, float64(k) * stepC / 2})
 					}
 				}
@@ -187,7 +191,9 @@ func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) map[[3]int]int
 		} else {
 			for j := range bodySplit[1] + 1 {
 				for i := range bodySplit[0] + 1 {
-					indexMapping[[3]int{i * 2, j * 2, k}] = len(f.akt)
+					if i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == bodySplit[1] || k == 2*bodySplit[2] {
+						indexMapping[[3]int{i * 2, j * 2, k}] = len(f.akt)
+					}
 					f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB, float64(k) * stepC / 2})
 				}
 			}
