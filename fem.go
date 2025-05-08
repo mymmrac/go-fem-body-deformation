@@ -28,6 +28,7 @@ type FEM struct {
 	fe [][60]float64 // Forces on elements, npq * 60
 
 	mg [][]float64 // Global stiffness matrix, ?? * ??
+	f  []float64   // Forces, ??
 }
 
 func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
@@ -101,11 +102,15 @@ func (f *FEM) Solve(bodySize [3]float64, bodySplit [3]int, e, nu, p float64) {
 		f.fe = append(f.fe, [60]float64{})
 	}
 	for _, zp := range f.zp {
-		f.fe = append(f.fe, f.calculateFE(p, zp))
+		f.fe = append(f.fe, f.calculateFE(p, zp)) // TODO: Something wrong here
 	}
+	slog.Info("FEM", "FE", f.fe)
 
 	f.mg = f.calculateMG()
 	slog.Info("FEM", "MG", f.mg)
+
+	f.f = f.calculateF()
+	slog.Info("FEM", "F", f.f)
 }
 
 func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) {
@@ -444,4 +449,29 @@ func (f *FEM) calculateMG() [][]float64 {
 	}
 
 	return mg
+}
+
+func (f *FEM) calculateF() []float64 {
+	fr := make([]float64, 3*len(f.akt))
+
+	for j, fe := range f.fe {
+		for i := range 60 {
+			var iForNT, xyzCoordI int
+			if i < 20 {
+				iForNT = i
+				xyzCoordI = 0
+			} else if i < 40 {
+				iForNT = i - 20
+				xyzCoordI = 1
+			} else {
+				iForNT = i - 40
+				xyzCoordI = 2
+			}
+
+			fI := 3*f.nt[j][iForNT] + xyzCoordI
+			fr[fI] += fe[i]
+		}
+	}
+
+	return fr
 }
