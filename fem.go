@@ -168,20 +168,21 @@ func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) map[[3]int]int
 	}
 
 	f.akt = nil
+	const showInternal = false
 	indexMapping := make(map[[3]int]int)
 	for k := range 2*bodySplit[2] + 1 {
 		if k%2 == 0 {
 			for j := range 2*bodySplit[1] + 1 {
 				if j%2 == 0 {
 					for i := range 2*bodySplit[0] + 1 {
-						if i == 0 || j == 0 || k == 0 || i == 2*bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
+						if showInternal || i == 0 || j == 0 || k == 0 || i == 2*bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
 							indexMapping[[3]int{i, j, k}] = len(f.akt)
 						}
 						f.akt = append(f.akt, [3]float64{float64(i) * stepA / 2, float64(j) * stepB / 2, float64(k) * stepC / 2})
 					}
 				} else {
 					for i := range bodySplit[0] + 1 {
-						if i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
+						if showInternal || i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
 							indexMapping[[3]int{i * 2, j, k}] = len(f.akt)
 						}
 						f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB / 2, float64(k) * stepC / 2})
@@ -191,7 +192,7 @@ func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) map[[3]int]int
 		} else {
 			for j := range bodySplit[1] + 1 {
 				for i := range bodySplit[0] + 1 {
-					if i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == bodySplit[1] || k == 2*bodySplit[2] {
+					if showInternal || i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == bodySplit[1] || k == 2*bodySplit[2] {
 						indexMapping[[3]int{i * 2, j * 2, k}] = len(f.akt)
 					}
 					f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB, float64(k) * stepC / 2})
@@ -203,8 +204,19 @@ func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) map[[3]int]int
 	f.nt = nil
 	for _, cube := range f.elements {
 		var ntCube [20]int
-		for i, xyz := range cube {
-			ntCube[i] = slices.Index(f.akt, xyz)
+		for i, p1 := range cube {
+			found := false
+			for j, p2 := range f.akt {
+				const eps = 1e-6
+				if math.Abs(p1[0]-p2[0]) < eps && math.Abs(p1[1]-p2[1]) < eps && math.Abs(p1[2]-p2[2]) < eps {
+					ntCube[i] = j
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("not found NT index")
+			}
 		}
 		f.nt = append(f.nt, ntCube)
 	}
