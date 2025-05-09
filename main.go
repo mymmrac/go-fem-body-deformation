@@ -226,7 +226,7 @@ func main() {
 				if err != nil {
 					slog.Error("Invalid Young's modulus value", "err", err)
 				} else {
-					yungaModule.Value = max(min(v, 100000.0), 0.01) // TODO: Validate range
+					yungaModule.Value = max(min(v, 100000.0), 0.01)
 				}
 				yungaModule.UpdateText()
 			}
@@ -242,7 +242,7 @@ func main() {
 				if err != nil {
 					slog.Error("Invalid Poisson's ratio value", "err", err)
 				} else {
-					poissonRatio.Value = max(min(v, 0.49), 0.0) // TODO: Validate range
+					poissonRatio.Value = max(min(v, 0.49), 0.0)
 				}
 				poissonRatio.UpdateText()
 			}
@@ -258,7 +258,7 @@ func main() {
 				if err != nil {
 					slog.Error("Invalid pressure value", "err", err)
 				} else {
-					pressure.Value = max(min(v, 10000.0), 0.01) // TODO: Validate range
+					pressure.Value = max(min(v, 10000.0), 0.01)
 				}
 				pressure.UpdateText()
 			}

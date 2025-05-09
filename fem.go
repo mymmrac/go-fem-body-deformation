@@ -97,7 +97,7 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 		f.fe = append(f.fe, [60]float64{})
 	}
 	for _, zp := range f.zp {
-		f.fe = append(f.fe, f.calculateFE(p, zp)) // TODO: Something wrong here
+		f.fe = append(f.fe, f.calculateFE(p, zp))
 	}
 
 	f.mg = f.calculateMG()
