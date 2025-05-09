@@ -13,6 +13,11 @@ var (
 	numbers []rl.Texture2D
 )
 
+type BodyDrawOptions struct {
+	ShowEdges    bool
+	ShowVertexes bool
+}
+
 func main() {
 	rl.SetTraceLogLevel(rl.LogError)
 	rl.InitWindow(960, 540, "Body Deformation")
@@ -65,18 +70,24 @@ func main() {
 	aY := rl.NewVector3(0, 1, 0)
 	aZ := rl.NewVector3(0, 0, 1)
 
-	showNumbers := false
 	for i := range 1 << 11 {
 		textImage := rl.ImageTextEx(rl.GetFontDefault(), strconv.Itoa(i), 32, 4, rl.White)
 		numbers = append(numbers, rl.LoadTextureFromImage(textImage))
 		rl.UnloadImage(textImage)
 	}
 
+	showNumbers := false
+	showOriginal := true
+	opt := BodyDrawOptions{
+		ShowEdges:    true,
+		ShowVertexes: true,
+	}
+
 	for !rl.WindowShouldClose() {
 		topLeftUiRect := rl.NewRectangle(
 			0, 0,
-			padding+inputWidth*3.5+padding*3+padding,
-			padding+inputHeight*3+padding*2+padding,
+			padding+inputWidth*3.5+padding*2.5+padding,
+			padding+inputHeight*2+padding+padding,
 		)
 		bottomLeftUiRect := rl.NewRectangle(
 			0, float32(rl.GetScreenHeight())-(padding+inputHeight*3+padding*2+padding),
@@ -120,6 +131,19 @@ func main() {
 			padding /= scaleFactor
 		}
 
+		if rl.IsKeyPressed(rl.KeyN) {
+			showNumbers = !showNumbers
+		}
+		if rl.IsKeyPressed(rl.KeyO) {
+			showOriginal = !showOriginal
+		}
+		if rl.IsKeyPressed(rl.KeyE) {
+			opt.ShowEdges = !opt.ShowEdges
+		}
+		if rl.IsKeyPressed(rl.KeyV) {
+			opt.ShowVertexes = !opt.ShowVertexes
+		}
+
 		rl.BeginDrawing()
 		{
 			rl.ClearBackground(rl.RayWhite)
@@ -131,9 +155,11 @@ func main() {
 				origin := rl.Vector3Scale(InputsToVec3(bodySize), 0.5)
 				origin.Y = 0
 
-				drawBody(body, bodyIndexes, origin, rl.Gray, rl.Blue, showNumbers)
+				if showOriginal {
+					drawBody(body, bodyIndexes, origin, rl.Gray, rl.Blue, showNumbers, opt)
+				}
 				if deformedBody != nil {
-					drawBody(deformedBody, bodyIndexes, origin, rl.Red, rl.Green, false)
+					drawBody(deformedBody, bodyIndexes, origin, rl.Red, rl.Green, false, opt)
 				}
 
 				const thickness = 0.02
@@ -190,12 +216,6 @@ func main() {
 					bodySplit[i].UpdateText()
 				}
 			}
-
-			// Show numbers
-			showNumbers = gui.CheckBox(
-				rl.NewRectangle(padding, padding+inputHeight*2+padding+padding, inputHeight, inputHeight),
-				"Show Numbers", showNumbers,
-			)
 
 			// Young's modulus
 			gui.Label(rl.NewRectangle(bottomLeftUiRect.X+padding, bottomLeftUiRect.Y+padding, inputWidth, inputHeight), "Young's Modulus")
@@ -268,22 +288,29 @@ func main() {
 	}
 }
 
-func drawBody(body [][3]float64, bodyIndexes map[[3]int]int, origin rl.Vector3, edgesColor, verticesColor rl.Color, showNumbers bool) {
+func drawBody(
+	body [][3]float64, bodyIndexes map[[3]int]int, origin rl.Vector3,
+	edgesColor, verticesColor rl.Color, showNumbers bool, opt BodyDrawOptions,
+) {
 	for key, idx := range bodyIndexes {
 		p1 := body[idx]
 		pv1 := rl.Vector3Subtract(rl.NewVector3(float32(p1[0]), float32(p1[2]), float32(p1[1])), origin)
 
 		const vertexSize = 0.07
-		rl.DrawCube(pv1, vertexSize, vertexSize, vertexSize, verticesColor)
+		if opt.ShowVertexes {
+			rl.DrawCube(pv1, vertexSize, vertexSize, vertexSize, verticesColor)
+		}
 
-		i, j, k := key[0], key[1], key[2]
-		for _, delta := range [][3]int{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} {
-			ni, nj, nk := i+delta[0], j+delta[1], k+delta[2]
-			neighborKey := [3]int{ni, nj, nk}
-			if nIdx, ok := bodyIndexes[neighborKey]; ok {
-				p2 := body[nIdx]
-				pv2 := rl.Vector3Subtract(rl.NewVector3(float32(p2[0]), float32(p2[2]), float32(p2[1])), origin)
-				rl.DrawLine3D(pv1, pv2, edgesColor)
+		if opt.ShowEdges {
+			i, j, k := key[0], key[1], key[2]
+			for _, delta := range [][3]int{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}} {
+				ni, nj, nk := i+delta[0], j+delta[1], k+delta[2]
+				neighborKey := [3]int{ni, nj, nk}
+				if nIdx, ok := bodyIndexes[neighborKey]; ok {
+					p2 := body[nIdx]
+					pv2 := rl.Vector3Subtract(rl.NewVector3(float32(p2[0]), float32(p2[2]), float32(p2[1])), origin)
+					rl.DrawLine3D(pv1, pv2, edgesColor)
+				}
 			}
 		}
 
