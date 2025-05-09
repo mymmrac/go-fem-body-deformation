@@ -36,10 +36,6 @@ type FEM struct {
 
 func (f *FEM) BuildElements(bodySize [3]float64, bodySplit [3]int) ([][3]float64, map[[3]int]int) {
 	indexMap := f.fillElements(bodySize, bodySplit)
-	slog.Info("FEM", "elements", f.elements)
-	slog.Info("FEM", "AKT", f.akt)
-	slog.Info("FEM", "NT", f.nt)
-
 	return f.akt, indexMap
 }
 
@@ -51,7 +47,6 @@ func (f *FEM) ChoseConditions(bodySplit [3]int) {
 			f.zu = append(f.zu, point)
 		}
 	}
-	slog.Info("FEM", "ZU", f.zu)
 
 	// TODO: Input from UI
 	f.zp = nil
@@ -59,22 +54,16 @@ func (f *FEM) ChoseConditions(bodySplit [3]int) {
 	for i := range bodySplit[0] * bodySplit[1] {
 		f.zp = append(f.zp, f.choseCubePoints(f.elements[allEl-i], 6, 2))
 	}
-	slog.Info("FEM", "ZP", f.zp)
 }
 
 func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
-	now := time.Now()
-	defer func() { slog.Info("FEM", "time", time.Since(now)) }()
-
-	slog.Info("FME", "DFIABG", dfiabg)
-	slog.Info("FME", "DEPSITE", depsite)
-	slog.Info("FME", "DEPSIxyzDEnt", depsiXYZdeNT)
+	start := time.Now()
+	defer func() { slog.Info("FEM", "total-time", time.Since(start)) }()
 
 	f.dj = nil
 	for _, cube := range f.elements {
 		f.dj = append(f.dj, f.createDJ(cube))
 	}
-	slog.Info("FEM", "DJ", f.dj)
 
 	f.djDet = nil
 	for _, dj := range f.dj {
@@ -89,13 +78,11 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 		}
 		f.djDet = append(f.djDet, ds)
 	}
-	slog.Info("FEM", "DJDet", f.djDet)
 
 	f.dfixyz = nil
 	for _, dj := range f.dj {
 		f.dfixyz = append(f.dfixyz, f.createDFIXYZ(dj))
 	}
-	slog.Info("FEM", "DFIXYZ", f.dfixyz)
 
 	l := e / ((1 + nu) * (1 - 2*nu))
 	mu := e / (2 * (1 + nu))
@@ -104,7 +91,6 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 	for i := range f.elements {
 		f.mge = append(f.mge, f.createMGE(f.dfixyz[i], f.djDet[i], l, nu, mu))
 	}
-	slog.Info("FEM", "MGE", f.mge)
 
 	f.fe = nil
 	for range len(f.nt) - len(f.zp) {
@@ -113,13 +99,10 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 	for _, zp := range f.zp {
 		f.fe = append(f.fe, f.calculateFE(p, zp)) // TODO: Something wrong here
 	}
-	slog.Info("FEM", "FE", f.fe)
 
 	f.mg = f.calculateMG()
-	slog.Info("FEM", "MG", f.mg)
 
 	f.f = f.calculateF()
-	slog.Info("FEM", "F", f.f)
 
 	flatMG := make([]float64, 0, len(f.mg)*len(f.mg[0]))
 	for i := range f.mg {
@@ -133,7 +116,6 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 		panic(err)
 	}
 	f.u = uVec.X.RawVector().Data
-	slog.Info("FEM", "U", f.u)
 
 	dAKT := slices.Clone(f.akt)
 	for i, u := range f.u {

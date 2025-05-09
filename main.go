@@ -33,26 +33,23 @@ func main() {
 		45,
 		rl.CameraPerspective,
 	)
-	cameraOrbiting := false
-	// cameraOrbiting := true // TODO: Reset
+	cameraOrbiting := true
 
-	// TODO: Reset to [4, 5, 3]
 	bodySize := [3]*InputValue[float64]{
 		NewInputValue(4.0),
-		NewInputValue(4.0),
-		NewInputValue(4.0),
+		NewInputValue(5.0),
+		NewInputValue(3.0),
 	}
 
-	// TODO: Reset to [4, 8, 3]
 	bodySplit := [3]*InputValue[int]{
-		NewInputValue(2),
-		NewInputValue(2),
-		NewInputValue(2),
+		NewInputValue(4),
+		NewInputValue(8),
+		NewInputValue(3),
 	}
 
 	yungaModule := NewInputValue(4.0)
 	poissonRatio := NewInputValue(0.3)
-	pressure := NewInputValue(10.0)
+	pressure := NewInputValue(2.0)
 
 	fem := &FEM{}
 	body, bodyIndexes := fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
@@ -153,6 +150,7 @@ func main() {
 				rl.DrawGrid(32, 1)
 
 				origin := rl.Vector3Scale(InputsToVec3(bodySize), 0.5)
+				origin.Y, origin.Z = origin.Z, origin.Y
 				origin.Y = 0
 
 				if showOriginal {
