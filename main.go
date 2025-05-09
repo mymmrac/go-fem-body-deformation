@@ -14,6 +14,7 @@ var (
 )
 
 func main() {
+	rl.SetTraceLogLevel(rl.LogError)
 	rl.InitWindow(960, 540, "Body Deformation")
 	defer rl.CloseWindow()
 

@@ -4,7 +4,7 @@ import "math"
 
 var gaussian = [3]float64{-math.Sqrt(0.6), 0, math.Sqrt(0.6)}
 
-var localPoints2D = [20][2]float64{
+var localPoints2D = [8][2]float64{
 	{-1, -1}, {1, -1}, {1, 1}, {-1, 1},
 	{0, -1}, {1, 0}, {0, 1}, {-1, 0},
 }
@@ -19,9 +19,9 @@ var localPoints3D = [20][3]float64{
 
 var dfiabg [3 * 3 * 3][20][3]float64
 
-var depsite [3 * 3][20][2]float64
+var depsite [3 * 3][8][2]float64
 
-var depsiXYZdeNT [3 * 3][20]float64
+var depsiXYZdeNT [3 * 3][8]float64
 
 var mgeCoefficients = [3]float64{5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0}
 
@@ -89,21 +89,21 @@ func calculateDEPSITE() {
 
 func psint14der(eta, tau, x, y float64) [2]float64 {
 	return [2]float64{
-		(1 / 4) * (tau*y + 1) * (x*(x*eta+y*tau-1) + x*(x*eta+1)),
-		(1 / 4) * (x*eta + 1) * (y*(x*eta+y*tau-1) + y*(y*tau+1)),
+		(1.0 / 4.0) * (tau*y + 1) * (x*(x*eta+y*tau-1) + x*(x*eta+1)),
+		(1.0 / 4.0) * (x*eta + 1) * (y*(x*eta+y*tau-1) + y*(y*tau+1)),
 	}
 }
 
 func psint57der(eta, tau, _, y float64) [2]float64 {
 	return [2]float64{
 		(-tau*y - 1) * eta,
-		(1 / 2) * (1 - eta*eta) * y,
+		(1.0 / 2.0) * (1 - eta*eta) * y,
 	}
 }
 
 func psint68der(eta, tau, x, _ float64) [2]float64 {
 	return [2]float64{
-		(1 / 2) * (1 - tau*tau) * x,
+		(1.0 / 2.0) * (1 - tau*tau) * x,
 		(-eta*x - 1) * tau,
 	}
 }
@@ -125,13 +125,13 @@ func calculateDepsiXYZdeNT() {
 }
 
 func psint14(eta, tau, x, y float64) float64 {
-	return (1 / 4) * (tau*y + 1) * (eta*x + 1) * (eta*x + y*tau - 1)
+	return (1.0 / 4.0) * (tau*y + 1) * (eta*x + 1) * (eta*x + y*tau - 1)
 }
 
 func psint57(eta, tau, _, y float64) float64 {
-	return (1 / 2) * (-eta*eta + 1) * (y*tau + 1)
+	return (1.0 / 2.0) * (-eta*eta + 1) * (y*tau + 1)
 }
 
 func psint68(eta, tau, x, _ float64) float64 {
-	return (1 / 2) * (-tau*tau + 1) * (x*eta + 1)
+	return (1.0 / 2.0) * (-tau*tau + 1) * (x*eta + 1)
 }

@@ -15,8 +15,8 @@ type FEM struct {
 	akt      [][3]float64     // Coords of grid vertices in global space, npq * 3 (x, y, z)
 	nt       [][20]int        // Local element indexes, npq * 20
 
-	zu [][3]float64   // Fixed points, ?? * 3 (x, y, z)
-	zp [][][3]float64 // Pushed points, ?? * ?? * 3 (x, y, z)
+	zu [][3]float64    // Fixed points, ?? * 3 (x, y, z)
+	zp [][8][3]float64 // Pushed points, ?? * 8 * 3 (x, y, z)
 
 	dj    [][27][3][3]float64 // Jacobian matrix, npq * 27 * 3 (a, b, g) * 3 (x, y, z)
 	djDet [][27]float64       // Jacobian determinant, npq * 27
@@ -371,7 +371,7 @@ func (f *FEM) createMGE(dfixyz [27][20][3]float64, djDet [27]float64, l, nu, mu 
 	return mge
 }
 
-func (f *FEM) choseCubePoints(cube [20][3]float64, side, sideOfAxis int) [][3]float64 {
+func (f *FEM) choseCubePoints(cube [20][3]float64, side, sideOfAxis int) [8][3]float64 {
 	var coordValue float64
 	if side%2 == 1 {
 		coordValue = math.MaxFloat64
@@ -385,16 +385,18 @@ func (f *FEM) choseCubePoints(cube [20][3]float64, side, sideOfAxis int) [][3]fl
 		}
 	}
 
-	var points [][3]float64
+	i := 0
+	var points [8][3]float64
 	for _, point := range cube {
 		if point[sideOfAxis] == coordValue {
-			points = append(points, point)
+			points[i] = point
+			i++
 		}
 	}
 	return points
 }
 
-func (f *FEM) calculateFE(p float64, zp [][3]float64) [60]float64 {
+func (f *FEM) calculateFE(p float64, zp [8][3]float64) [60]float64 {
 	dXYZdNT := f.dXYZdNT(zp)
 	var fe1, fe2, fe3 [8]float64
 
@@ -422,7 +424,7 @@ func (f *FEM) calculateFE(p float64, zp [][3]float64) [60]float64 {
 	}
 }
 
-func (f *FEM) dXYZdNT(points [][3]float64) [3 * 3][3][2]float64 {
+func (f *FEM) dXYZdNT(points [8][3]float64) [3 * 3][3][2]float64 {
 	var dXYZdNT [9][3][2]float64
 	for i := range 3 * 3 {
 		var sumXEta, sumYEta, sumZEta float64
