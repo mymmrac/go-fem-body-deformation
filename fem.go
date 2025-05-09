@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"math"
 	"slices"
@@ -253,6 +254,8 @@ func (f *FEM) createCube(aStart, aEnd, bStart, bEnd, cStart, cEnd float64) [20][
 }
 
 func (f *FEM) createDJ(cube [20][3]float64) [27][3][3]float64 {
+	const eps = 1e-10
+
 	var dj [27][3][3]float64
 	for i := range 3 * 3 * 3 {
 		var sumXA, sumXB, sumXG float64
@@ -278,6 +281,21 @@ func (f *FEM) createDJ(cube [20][3]float64) [27][3][3]float64 {
 			{sumXB, sumYB, sumZB},
 			{sumXG, sumYG, sumZG},
 		}
+
+		// Added rounding for values close to -1, 0, 1
+		for j := range dj[i] {
+			for k := range dj[i][j] {
+				v := dj[i][j][k]
+				if math.Abs(v) < eps {
+					v = 0
+				} else if math.Abs(v-1) < eps {
+					v = 1
+				} else if math.Abs(v+1) < eps {
+					v = -1
+				}
+				dj[i][j][k] = v
+			}
+		}
 	}
 	return dj
 }
@@ -293,9 +311,9 @@ func (f *FEM) createDFIXYZ(dj [27][3][3]float64) [27][20][3]float64 {
 			})
 			b := mat.NewVecDense(3, points[:])
 
-			result, err := linsolve.Iterative(&matrix{Dense: a}, b, &linsolve.CG{}, nil)
+			result, err := linsolve.Iterative(&matrix{Dense: a}, b, &linsolve.GMRES{}, nil)
 			if err != nil {
-				dfixyz[i][j] = [3]float64{0, 0, 0}
+				panic(fmt.Errorf("compute DFIXYZ at %d %d: %w", i, j, err))
 			} else {
 				dfixyz[i][j] = [3]float64{result.X.AtVec(0), result.X.AtVec(1), result.X.AtVec(2)}
 			}
