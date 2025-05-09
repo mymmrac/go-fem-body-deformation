@@ -35,8 +35,78 @@ type FEM struct {
 }
 
 func (f *FEM) BuildElements(bodySize [3]float64, bodySplit [3]int) ([][3]float64, map[[3]int]int) {
-	indexMap := f.fillElements(bodySize, bodySplit)
-	return f.akt, indexMap
+	stepA := bodySize[0] / float64(bodySplit[0])
+	stepB := bodySize[1] / float64(bodySplit[1])
+	stepC := bodySize[2] / float64(bodySplit[2])
+
+	f.elements = nil
+	for k := range bodySplit[2] {
+		for j := range bodySplit[1] {
+			for i := range bodySplit[0] {
+				f.elements = append(f.elements, f.createCube(
+					float64(i)*stepA, float64(i+1)*stepA,
+					float64(j)*stepB, float64(j+1)*stepB,
+					float64(k)*stepC, float64(k+1)*stepC,
+				))
+			}
+		}
+	}
+
+	f.akt = nil
+	const showInternal = false
+	indexMapping := make(map[[3]int]int)
+	for k := range 2*bodySplit[2] + 1 {
+		if k%2 == 0 {
+			for j := range 2*bodySplit[1] + 1 {
+				if j%2 == 0 {
+					for i := range 2*bodySplit[0] + 1 {
+						if showInternal || i == 0 || j == 0 || k == 0 || i == 2*bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
+							indexMapping[[3]int{i, j, k}] = len(f.akt)
+						}
+						f.akt = append(f.akt, [3]float64{float64(i) * stepA / 2, float64(j) * stepB / 2, float64(k) * stepC / 2})
+					}
+				} else {
+					for i := range bodySplit[0] + 1 {
+						if showInternal || i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
+							indexMapping[[3]int{i * 2, j, k}] = len(f.akt)
+						}
+						f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB / 2, float64(k) * stepC / 2})
+					}
+				}
+			}
+		} else {
+			for j := range bodySplit[1] + 1 {
+				for i := range bodySplit[0] + 1 {
+					if showInternal || i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == bodySplit[1] || k == 2*bodySplit[2] {
+						indexMapping[[3]int{i * 2, j * 2, k}] = len(f.akt)
+					}
+					f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB, float64(k) * stepC / 2})
+				}
+			}
+		}
+	}
+
+	f.nt = nil
+	for _, cube := range f.elements {
+		var ntCube [20]int
+		for i, p1 := range cube {
+			found := false
+			for j, p2 := range f.akt {
+				const eps = 1e-6
+				if math.Abs(p1[0]-p2[0]) < eps && math.Abs(p1[1]-p2[1]) < eps && math.Abs(p1[2]-p2[2]) < eps {
+					ntCube[i] = j
+					found = true
+					break
+				}
+			}
+			if !found {
+				panic("not found NT index")
+			}
+		}
+		f.nt = append(f.nt, ntCube)
+	}
+
+	return f.akt, indexMapping
 }
 
 func (f *FEM) ChoseConditions(bodySplit [3]int) {
@@ -50,10 +120,13 @@ func (f *FEM) ChoseConditions(bodySplit [3]int) {
 
 	// TODO: Input from UI
 	f.zp = nil
-	allEl := len(f.elements) - 1
-	for i := range bodySplit[0] * bodySplit[1] {
-		f.zp = append(f.zp, f.choseCubePoints(f.elements[allEl-i], 6, 2))
-	}
+
+	// allEl := len(f.elements) - 1
+	// for i := range bodySplit[0] * bodySplit[1] {
+	// 	f.zp = append(f.zp, f.choseCubePoints(f.elements[allEl-i], false, 2))
+	// }
+
+	f.zp = append(f.zp, f.choseCubePoints(f.elements[0], false, 2))
 }
 
 func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
@@ -130,81 +203,6 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 	}
 
 	return dAKT
-}
-
-func (f *FEM) fillElements(bodySize [3]float64, bodySplit [3]int) map[[3]int]int {
-	stepA := bodySize[0] / float64(bodySplit[0])
-	stepB := bodySize[1] / float64(bodySplit[1])
-	stepC := bodySize[2] / float64(bodySplit[2])
-
-	f.elements = nil
-	for k := range bodySplit[2] {
-		for j := range bodySplit[1] {
-			for i := range bodySplit[0] {
-				f.elements = append(f.elements, f.createCube(
-					float64(i)*stepA, float64(i+1)*stepA,
-					float64(j)*stepB, float64(j+1)*stepB,
-					float64(k)*stepC, float64(k+1)*stepC,
-				))
-			}
-		}
-	}
-
-	f.akt = nil
-	const showInternal = false
-	indexMapping := make(map[[3]int]int)
-	for k := range 2*bodySplit[2] + 1 {
-		if k%2 == 0 {
-			for j := range 2*bodySplit[1] + 1 {
-				if j%2 == 0 {
-					for i := range 2*bodySplit[0] + 1 {
-						if showInternal || i == 0 || j == 0 || k == 0 || i == 2*bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
-							indexMapping[[3]int{i, j, k}] = len(f.akt)
-						}
-						f.akt = append(f.akt, [3]float64{float64(i) * stepA / 2, float64(j) * stepB / 2, float64(k) * stepC / 2})
-					}
-				} else {
-					for i := range bodySplit[0] + 1 {
-						if showInternal || i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == 2*bodySplit[1] || k == 2*bodySplit[2] {
-							indexMapping[[3]int{i * 2, j, k}] = len(f.akt)
-						}
-						f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB / 2, float64(k) * stepC / 2})
-					}
-				}
-			}
-		} else {
-			for j := range bodySplit[1] + 1 {
-				for i := range bodySplit[0] + 1 {
-					if showInternal || i == 0 || j == 0 || k == 0 || i == bodySplit[0] || j == bodySplit[1] || k == 2*bodySplit[2] {
-						indexMapping[[3]int{i * 2, j * 2, k}] = len(f.akt)
-					}
-					f.akt = append(f.akt, [3]float64{float64(i) * stepA, float64(j) * stepB, float64(k) * stepC / 2})
-				}
-			}
-		}
-	}
-
-	f.nt = nil
-	for _, cube := range f.elements {
-		var ntCube [20]int
-		for i, p1 := range cube {
-			found := false
-			for j, p2 := range f.akt {
-				const eps = 1e-6
-				if math.Abs(p1[0]-p2[0]) < eps && math.Abs(p1[1]-p2[1]) < eps && math.Abs(p1[2]-p2[2]) < eps {
-					ntCube[i] = j
-					found = true
-					break
-				}
-			}
-			if !found {
-				panic("not found NT index")
-			}
-		}
-		f.nt = append(f.nt, ntCube)
-	}
-
-	return indexMapping
 }
 
 func (f *FEM) createCube(aStart, aEnd, bStart, bEnd, cStart, cEnd float64) [20][3]float64 {
@@ -383,9 +381,9 @@ func (f *FEM) createMGE(dfixyz [27][20][3]float64, djDet [27]float64, l, nu, mu 
 	return mge
 }
 
-func (f *FEM) choseCubePoints(cube [20][3]float64, side, sideOfAxis int) [8][3]float64 {
+func (f *FEM) choseCubePoints(cube [20][3]float64, farSide bool, sideOfAxis int) [8][3]float64 {
 	var coordValue float64
-	if side%2 == 1 {
+	if farSide {
 		coordValue = math.MaxFloat64
 		for _, point := range cube {
 			coordValue = min(point[sideOfAxis], coordValue)
