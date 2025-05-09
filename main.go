@@ -224,7 +224,7 @@ func main() {
 				if err != nil {
 					slog.Error("Invalid Poisson's ratio value", "err", err)
 				} else {
-					poissonRatio.Value = max(min(v, 0.5), 0.0) // TODO: Validate range
+					poissonRatio.Value = max(min(v, 0.49), 0.0) // TODO: Validate range
 				}
 				poissonRatio.UpdateText()
 			}
@@ -271,7 +271,7 @@ func main() {
 func drawBody(body [][3]float64, bodyIndexes map[[3]int]int, origin rl.Vector3, edgesColor, verticesColor rl.Color, showNumbers bool) {
 	for key, idx := range bodyIndexes {
 		p1 := body[idx]
-		pv1 := rl.Vector3Subtract(rl.NewVector3(float32(p1[0]), float32(p1[1]), float32(p1[2])), origin)
+		pv1 := rl.Vector3Subtract(rl.NewVector3(float32(p1[0]), float32(p1[2]), float32(p1[1])), origin)
 
 		const vertexSize = 0.07
 		rl.DrawCube(pv1, vertexSize, vertexSize, vertexSize, verticesColor)
@@ -282,7 +282,7 @@ func drawBody(body [][3]float64, bodyIndexes map[[3]int]int, origin rl.Vector3, 
 			neighborKey := [3]int{ni, nj, nk}
 			if nIdx, ok := bodyIndexes[neighborKey]; ok {
 				p2 := body[nIdx]
-				pv2 := rl.Vector3Subtract(rl.NewVector3(float32(p2[0]), float32(p2[1]), float32(p2[2])), origin)
+				pv2 := rl.Vector3Subtract(rl.NewVector3(float32(p2[0]), float32(p2[2]), float32(p2[1])), origin)
 				rl.DrawLine3D(pv1, pv2, edgesColor)
 			}
 		}
