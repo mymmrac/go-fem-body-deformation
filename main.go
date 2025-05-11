@@ -83,6 +83,8 @@ func main() {
 		ShowVertexes: false,
 	}
 
+	running := 0
+
 	for !rl.WindowShouldClose() {
 		topLeftUiRect := rl.NewRectangle(
 			0, 0,
@@ -314,16 +316,24 @@ func main() {
 			}
 
 			// Run
+			runBtnText := "Run"
+			if running > 0 {
+				runBtnText = "Running..."
+				running++
+			}
 			if gui.Button(
 				rl.NewRectangle(float32(rl.GetScreenWidth())-padding-inputWidth, float32(rl.GetScreenHeight())-padding-inputHeight, inputWidth, inputHeight),
-				"Run",
+				runBtnText,
 			) {
+				running = 1
+			} else if running > 10 {
 				slog.Info("Running...",
 					"bodySize", InputsToVec3(bodySize),
 					"bodySplits", InputsToVec3(bodySplit),
 					"yungaModule", yungaModule, "poissonRatio", poissonRatio, "pressure", pressure,
 				)
 				deformedBody = fem.ApplyForce(yungaModule.Value, poissonRatio.Value, pressure.Value)
+				running = 0
 			}
 		}
 		rl.EndDrawing()
