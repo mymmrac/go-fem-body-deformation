@@ -20,7 +20,7 @@ type BodyDrawOptions struct {
 
 func main() {
 	rl.SetTraceLogLevel(rl.LogError)
-	rl.InitWindow(960, 540, "Body Deformation")
+	rl.InitWindow(1280, 720, "Body Deformation")
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(60)
@@ -59,9 +59,9 @@ func main() {
 
 	const inputTextSize = 20
 	var (
-		inputWidth  float32 = 64.0
-		inputHeight float32 = 24.0
-		padding     float32 = 8.0
+		inputWidth  float32 = 64.0 * 1.4
+		inputHeight float32 = 24.0 * 1.4
+		padding     float32 = 8.0 * 1.4
 	)
 
 	a0 := rl.NewVector3(0, 0, 0)
