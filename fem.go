@@ -16,8 +16,8 @@ type FEM struct {
 	akt      [][3]float64     // Coords of grid vertices in global space, npq * 3 (x, y, z)
 	nt       [][20]int        // Local element indexes, npq * 20
 
-	zu [][3]float64    // Fixed points, ?? * 3 (x, y, z)
-	zp [][8][3]float64 // Pushed points, ?? * 8 * 3 (x, y, z)
+	zu [][3]float64 // Fixed points, ?? * 3 (x, y, z)
+	zp map[int]bool // Pushed points, index of the element (pushes on top size)
 
 	dj    [][27][3][3]float64 // Jacobian matrix, npq * 27 * 3 (a, b, g) * 3 (x, y, z)
 	djDet [][27]float64       // Jacobian determinant, npq * 27
@@ -106,27 +106,8 @@ func (f *FEM) BuildElements(bodySize [3]float64, bodySplit [3]int) ([][3]float64
 		f.nt = append(f.nt, ntCube)
 	}
 
+	clear(f.zp)
 	return f.akt, indexMapping
-}
-
-func (f *FEM) ChoseConditions(bodySplit [3]int) {
-	// TODO: Input from UI
-	f.zu = nil
-	for _, point := range f.akt {
-		if point[2] == 0 {
-			f.zu = append(f.zu, point)
-		}
-	}
-
-	// TODO: Input from UI
-	f.zp = nil
-
-	// allEl := len(f.elements) - 1
-	// for i := range bodySplit[0] * bodySplit[1] {
-	// 	f.zp = append(f.zp, f.choseCubePoints(f.elements[allEl-i], false, 2))
-	// }
-
-	f.zp = append(f.zp, f.choseCubePoints(f.elements[0], false, 2))
 }
 
 func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
@@ -165,12 +146,18 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 		f.mge = append(f.mge, f.createMGE(f.dfixyz[i], f.djDet[i], l, nu, mu))
 	}
 
-	f.fe = nil
-	for range len(f.nt) - len(f.zp) {
-		f.fe = append(f.fe, [60]float64{})
+	f.zu = nil
+	for _, point := range f.akt {
+		if point[2] == 0 {
+			f.zu = append(f.zu, point)
+		}
 	}
-	for _, zp := range f.zp {
-		f.fe = append(f.fe, f.calculateFE(p, zp))
+
+	f.fe = make([][60]float64, len(f.nt))
+	for i, push := range f.zp {
+		if push {
+			f.fe[i] = f.calculateFE(p, f.choseCubeSide(f.elements[i], false, 2))
+		}
 	}
 
 	f.mg = f.calculateMG()
@@ -381,7 +368,7 @@ func (f *FEM) createMGE(dfixyz [27][20][3]float64, djDet [27]float64, l, nu, mu 
 	return mge
 }
 
-func (f *FEM) choseCubePoints(cube [20][3]float64, farSide bool, sideOfAxis int) [8][3]float64 {
+func (f *FEM) choseCubeSide(cube [20][3]float64, farSide bool, sideOfAxis int) [8][3]float64 {
 	var coordValue float64
 	if farSide {
 		coordValue = math.MaxFloat64

@@ -33,7 +33,7 @@ func main() {
 		45,
 		rl.CameraPerspective,
 	)
-	cameraOrbiting := true
+	cameraOrbiting := false
 
 	bodySize := [3]*InputValue[float64]{
 		NewInputValue(4.0),
@@ -51,7 +51,9 @@ func main() {
 	poissonRatio := NewInputValue(0.3)
 	pressure := NewInputValue(2.0)
 
-	fem := &FEM{}
+	fem := &FEM{
+		zp: make(map[int]bool),
+	}
 	body, bodyIndexes := fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
 	var deformedBody [][3]float64
 
@@ -75,9 +77,10 @@ func main() {
 
 	showNumbers := false
 	showOriginal := true
+	showForces := true
 	opt := BodyDrawOptions{
 		ShowEdges:    true,
-		ShowVertexes: true,
+		ShowVertexes: false,
 	}
 
 	for !rl.WindowShouldClose() {
@@ -128,11 +131,14 @@ func main() {
 			padding /= scaleFactor
 		}
 
-		if rl.IsKeyPressed(rl.KeyN) {
-			showNumbers = !showNumbers
-		}
 		if rl.IsKeyPressed(rl.KeyO) {
 			showOriginal = !showOriginal
+		}
+		if showOriginal && rl.IsKeyPressed(rl.KeyN) {
+			showNumbers = !showNumbers
+		}
+		if showOriginal && rl.IsKeyPressed(rl.KeyF) {
+			showForces = !showForces
 		}
 		if rl.IsKeyPressed(rl.KeyE) {
 			opt.ShowEdges = !opt.ShowEdges
@@ -141,6 +147,17 @@ func main() {
 			opt.ShowVertexes = !opt.ShowVertexes
 		}
 
+		if showOriginal && showForces && rl.IsKeyPressed(rl.KeyC) {
+			clear(fem.zp)
+		}
+		if showOriginal && showForces && rl.IsKeyPressed(rl.KeyT) {
+			a, b, c := bodySplit[0].Value, bodySplit[1].Value, bodySplit[2].Value
+			for i := range a * b {
+				fem.zp[i+a*b*(c-1)] = true
+			}
+		}
+
+		ray := rl.GetScreenToWorldRay(rl.GetMousePosition(), camera)
 		rl.BeginDrawing()
 		{
 			rl.ClearBackground(rl.RayWhite)
@@ -155,6 +172,34 @@ func main() {
 
 				if showOriginal {
 					drawBody(body, bodyIndexes, origin, rl.Gray, rl.Blue, showNumbers, opt)
+
+					if showForces {
+						a, b, c := bodySplit[0].Value, bodySplit[1].Value, bodySplit[2].Value
+						for i, cube := range fem.elements[0+a*b*(c-1) : a*b+a*b*(c-1)] {
+							side := fem.choseCubeSide(cube, false, 2)
+							collision := rl.GetRayCollisionQuad(ray,
+								transformPoint(side[0], origin), transformPoint(side[1], origin),
+								transformPoint(side[2], origin), transformPoint(side[3], origin),
+							)
+							chosen := fem.zp[i+a*b*(c-1)]
+							if collision.Hit || chosen {
+								if collision.Hit && rl.IsMouseButtonPressed(rl.MouseButtonRight) {
+									fem.zp[i+a*b*(c-1)] = !chosen
+								}
+
+								clr := rl.ColorAlpha(rl.LightGray, 0.7)
+								if chosen {
+									clr = rl.ColorAlpha(rl.Orange, 0.4)
+									if collision.Hit {
+										clr = rl.ColorAlpha(rl.Orange, 0.7)
+									}
+								}
+
+								rl.DrawTriangle3D(transformPoint(side[0], origin), transformPoint(side[2], origin), transformPoint(side[1], origin), clr)
+								rl.DrawTriangle3D(transformPoint(side[3], origin), transformPoint(side[2], origin), transformPoint(side[0], origin), clr)
+							}
+						}
+					}
 				}
 				if deformedBody != nil {
 					drawBody(deformedBody, bodyIndexes, origin, rl.Red, rl.Green, false, opt)
@@ -278,7 +323,6 @@ func main() {
 					"bodySplits", InputsToVec3(bodySplit),
 					"yungaModule", yungaModule, "poissonRatio", poissonRatio, "pressure", pressure,
 				)
-				fem.ChoseConditions(InputsToSlice3(bodySplit))
 				deformedBody = fem.ApplyForce(yungaModule.Value, poissonRatio.Value, pressure.Value)
 			}
 		}
@@ -286,17 +330,20 @@ func main() {
 	}
 }
 
+func transformPoint(p [3]float64, origin rl.Vector3) rl.Vector3 {
+	return rl.Vector3Subtract(rl.NewVector3(float32(p[0]), float32(p[2]), float32(p[1])), origin)
+}
+
 func drawBody(
 	body [][3]float64, bodyIndexes map[[3]int]int, origin rl.Vector3,
 	edgesColor, verticesColor rl.Color, showNumbers bool, opt BodyDrawOptions,
 ) {
 	for key, idx := range bodyIndexes {
-		p1 := body[idx]
-		pv1 := rl.Vector3Subtract(rl.NewVector3(float32(p1[0]), float32(p1[2]), float32(p1[1])), origin)
+		p1 := transformPoint(body[idx], origin)
 
 		const vertexSize = 0.07
 		if opt.ShowVertexes {
-			rl.DrawCube(pv1, vertexSize, vertexSize, vertexSize, verticesColor)
+			rl.DrawCube(p1, vertexSize, vertexSize, vertexSize, verticesColor)
 		}
 
 		if opt.ShowEdges {
@@ -305,15 +352,14 @@ func drawBody(
 				ni, nj, nk := i+delta[0], j+delta[1], k+delta[2]
 				neighborKey := [3]int{ni, nj, nk}
 				if nIdx, ok := bodyIndexes[neighborKey]; ok {
-					p2 := body[nIdx]
-					pv2 := rl.Vector3Subtract(rl.NewVector3(float32(p2[0]), float32(p2[2]), float32(p2[1])), origin)
-					rl.DrawLine3D(pv1, pv2, edgesColor)
+					p2 := transformPoint(body[nIdx], origin)
+					rl.DrawLine3D(p1, p2, edgesColor)
 				}
 			}
 		}
 
 		if showNumbers {
-			rl.DrawBillboard(camera, numbers[idx+1], rl.Vector3Add(pv1, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+			rl.DrawBillboard(camera, numbers[idx+1], rl.Vector3Add(p1, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
 		}
 	}
 }
