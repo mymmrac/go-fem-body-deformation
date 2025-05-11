@@ -1,4 +1,4 @@
-module body-deformation
+module github.com/mymmrac/go-fem-body-deformation
 
 go 1.24.2
 
