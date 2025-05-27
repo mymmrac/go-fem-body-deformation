@@ -11,13 +11,22 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+// TODO: Select any side
+// TODO: Select fixed sides
+// TODO: Clean up comments
+
+type ZP struct {
+	Index int
+	Side  int
+}
+
 type FEM struct {
 	elements [][20][3]float64 // Coords of grid vertices in local space, npq * 20 * 3 (x, y, z)
 	akt      [][3]float64     // Coords of grid vertices in global space, npq * 3 (x, y, z)
 	nt       [][20]int        // Local element indexes, npq * 20
 
 	zu [][3]float64 // Fixed points, ?? * 3 (x, y, z)
-	zp map[int]bool // Pushed points, index of the element (pushes on top size)
+	zp map[ZP]bool  // Pushed points, index of the element (pushes on top size)
 
 	dj    [][27][3][3]float64 // Jacobian matrix, npq * 27 * 3 (a, b, g) * 3 (x, y, z)
 	djDet [][27]float64       // Jacobian determinant, npq * 27
@@ -154,9 +163,10 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 	}
 
 	f.fe = make([][60]float64, len(f.nt))
-	for i, push := range f.zp {
+	for k, push := range f.zp {
 		if push {
-			f.fe[i] = f.calculateFE(p, f.choseCubeSide(f.elements[i], false, 2))
+			// TODO: Check case when same element is pushed multiple times
+			f.fe[k.Index] = f.calculateFE(p, f.choseCubeSideN(f.elements[k.Index], k.Side))
 		}
 	}
 
@@ -368,6 +378,10 @@ func (f *FEM) createMGE(dfixyz [27][20][3]float64, djDet [27]float64, l, nu, mu 
 	return mge
 }
 
+func (f *FEM) choseCubeSideN(cube [20][3]float64, n int) [8][3]float64 {
+	return f.choseCubeSide(cube, n%2 == 0, n/2)
+}
+
 func (f *FEM) choseCubeSide(cube [20][3]float64, farSide bool, sideOfAxis int) [8][3]float64 {
 	var coordValue float64
 	if farSide {
@@ -485,7 +499,7 @@ func (f *FEM) calculateMG() [][]float64 {
 		}
 	}
 
-	// TODO: Is this right? Just by index of ZU?
+	// TODO: This should use indexes
 	for i := range f.zu {
 		ix := 3*i + 0
 		iy := 3*i + 1
