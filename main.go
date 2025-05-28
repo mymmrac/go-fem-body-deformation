@@ -58,6 +58,14 @@ func main() {
 	body, bodyIndexes := fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
 	var deformedBody [][3]float64
 
+	{ // Fix bottom and push on top
+		a, b, c := bodySplit[0].Value, bodySplit[1].Value, bodySplit[2].Value
+		for i := range a * b {
+			fem.zu[ElementSide{i, 4}] = true
+			fem.zp[ElementSide{i + a*b*(c-1), 5}] = true
+		}
+	}
+
 	// TODO: Remove this
 	// fem.zp[ElementSide{92, 0}] = true
 	// var rotation = rl.MatrixRotate(rl.GetCameraUp(&camera), 4.5)
@@ -169,13 +177,43 @@ func main() {
 			opt.ShowVertexes = !opt.ShowVertexes
 		}
 
-		if showOriginal && showForces && rl.IsKeyPressed(rl.KeyC) {
-			clear(fem.zp)
-		}
-		if showOriginal && showForces && rl.IsKeyPressed(rl.KeyT) {
-			a, b, c := bodySplit[0].Value, bodySplit[1].Value, bodySplit[2].Value
-			for i := range a * b {
-				fem.zp[ElementSide{i + a*b*(c-1), 5}] = true
+		if showOriginal && showForces {
+			if rl.IsKeyPressed(rl.KeyC) {
+				if rl.IsKeyDown(rl.KeyLeftShift) {
+					clear(fem.zu)
+				} else {
+					clear(fem.zp)
+				}
+			}
+
+			if rl.IsKeyPressed(rl.KeyT) {
+				a, b, c := bodySplit[0].Value, bodySplit[1].Value, bodySplit[2].Value
+				fixOrPush := rl.IsKeyDown(rl.KeyLeftShift)
+				for i := range a * b {
+					es := ElementSide{i + a*b*(c-1), 5}
+					if fixOrPush {
+						fem.zu[es] = true
+						fem.zp[es] = false
+					} else {
+						fem.zu[es] = false
+						fem.zp[es] = true
+					}
+				}
+			}
+
+			if rl.IsKeyPressed(rl.KeyB) {
+				a, b, _ := bodySplit[0].Value, bodySplit[1].Value, bodySplit[2].Value
+				fixOrPush := rl.IsKeyDown(rl.KeyLeftShift)
+				for i := range a * b {
+					es := ElementSide{i, 4}
+					if fixOrPush {
+						fem.zu[es] = true
+						fem.zp[es] = false
+					} else {
+						fem.zu[es] = false
+						fem.zp[es] = true
+					}
+				}
 			}
 		}
 
@@ -295,17 +333,36 @@ func main() {
 							}
 
 							for n := range 6 {
-								chosen := fem.zp[ElementSide{i, n}]
-								if (closestCollisionI == i && closestCollisionN == n) || chosen {
+								var chosen int // 0 - nothing, 1 - fix, 2 - push
+								es := ElementSide{i, n}
+								if fem.zu[es] {
+									chosen = 1
+								} else if fem.zp[es] {
+									chosen = 2
+								}
+
+								if (closestCollisionI == i && closestCollisionN == n) || chosen != 0 {
 									if (closestCollisionI == i && closestCollisionN == n) && rl.IsMouseButtonPressed(rl.MouseButtonRight) {
-										fem.zp[ElementSide{i, n}] = !chosen
+										if rl.IsKeyDown(rl.KeyLeftShift) {
+											fem.zu[es] = !(chosen != 0)
+											fem.zp[es] = false
+										} else {
+											fem.zu[es] = false
+											fem.zp[es] = !(chosen != 0)
+										}
 									}
 
 									q := quads[n]
 									side := fem.choseCubeSide(cube, n)
 
 									clr := rl.ColorAlpha(rl.LightGray, 0.7)
-									if chosen {
+
+									if chosen == 1 {
+										clr = rl.ColorAlpha(rl.Blue, 0.4)
+										if collisions[i] != nil && collisions[i][n].Hit {
+											clr = rl.ColorAlpha(rl.Blue, 0.7)
+										}
+									} else if chosen == 2 {
 										clr = rl.ColorAlpha(rl.Orange, 0.4)
 										if collisions[i] != nil && collisions[i][n].Hit {
 											clr = rl.ColorAlpha(rl.Orange, 0.7)
