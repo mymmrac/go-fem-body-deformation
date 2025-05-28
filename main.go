@@ -103,16 +103,7 @@ func main() {
 
 	running := 0
 
-	quads := [6][6]int{
-		0: {1, 3, 2, 1, 0, 3},
-		1: {1, 3, 2, 1, 0, 3},
-
-		2: {1, 3, 2, 1, 0, 3},
-		3: {1, 3, 2, 1, 0, 3},
-
-		4: {0, 2, 1, 3, 2, 0},
-		5: {0, 2, 1, 3, 2, 0},
-	}
+	quad := [6]int{1, 3, 2, 1, 0, 3}
 
 	for !rl.WindowShouldClose() {
 		topLeftUiRect := rl.NewRectangle(
@@ -358,7 +349,6 @@ func main() {
 										}
 									}
 
-									q := quads[n]
 									side := fem.choseCubeSide(cube, n)
 
 									clr := rl.ColorAlpha(rl.LightGray, 0.7)
@@ -380,8 +370,8 @@ func main() {
 									// rl.DrawBillboard(camera, numbers[2], rl.Vector3Add(transformPoint(side[2], origin), rl.Vector3{Y: 0.2}), 0.2, rl.Black)
 									// rl.DrawBillboard(camera, numbers[3], rl.Vector3Add(transformPoint(side[3], origin), rl.Vector3{Y: 0.2}), 0.2, rl.Black)
 
-									rl.DrawTriangle3D(transformPoint(side[q[0]], origin), transformPoint(side[q[1]], origin), transformPoint(side[q[2]], origin), clr)
-									rl.DrawTriangle3D(transformPoint(side[q[3]], origin), transformPoint(side[q[4]], origin), transformPoint(side[q[5]], origin), clr)
+									rl.DrawTriangle3D(transformPoint(side[quad[0]], origin), transformPoint(side[quad[1]], origin), transformPoint(side[quad[2]], origin), clr)
+									rl.DrawTriangle3D(transformPoint(side[quad[3]], origin), transformPoint(side[quad[4]], origin), transformPoint(side[quad[5]], origin), clr)
 								}
 							}
 						}
