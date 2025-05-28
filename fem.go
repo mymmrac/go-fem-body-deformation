@@ -449,7 +449,6 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 
 	switch side {
 	case 0:
-		fmt.Println(fe1) // DONE
 		return [60]float64{
 			3:  fe1[0],
 			0:  fe1[1],
@@ -461,7 +460,6 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 			15: fe1[7],
 		}
 	case 1:
-		fmt.Println(fe1) // DONE
 		return [60]float64{
 			1:  fe1[0],
 			2:  fe1[1],
@@ -473,7 +471,6 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 			13: fe1[7],
 		}
 	case 2:
-		fmt.Println(fe2) // DONE
 		return [60]float64{
 			20 + 0:  fe2[0],
 			20 + 1:  fe2[1],
@@ -485,7 +482,6 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 			20 + 12: fe2[7],
 		}
 	case 3:
-		fmt.Println(fe2) // DONE
 		return [60]float64{
 			20 + 2:  fe2[0],
 			20 + 3:  fe2[1],
@@ -497,7 +493,6 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 			20 + 14: fe2[7],
 		}
 	case 4:
-		fmt.Println(fe3) // DONE
 		return [60]float64{
 			40 + 0:  fe3[0],
 			40 + 1:  fe3[1],
@@ -509,7 +504,6 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 			40 + 11: fe3[7],
 		}
 	case 5:
-		fmt.Println(fe3) // DONE
 		return [60]float64{
 			40 + 4:  fe3[0],
 			40 + 5:  fe3[1],

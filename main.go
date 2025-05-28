@@ -94,11 +94,11 @@ func main() {
 	running := 0
 
 	quads := [6][6]int{
-		0: {0, 1, 2, 1, 3, 2},
-		1: {0, 2, 1, 1, 2, 3},
+		0: {1, 3, 2, 1, 0, 3},
+		1: {1, 3, 2, 1, 0, 3},
 
-		2: {0, 2, 1, 1, 2, 3},
-		3: {0, 2, 1, 1, 2, 3},
+		2: {1, 3, 2, 1, 0, 3},
+		3: {1, 3, 2, 1, 0, 3},
 
 		4: {0, 1, 2, 3, 0, 2},
 		5: {0, 2, 1, 3, 2, 0},
@@ -310,6 +310,11 @@ func main() {
 											clr = rl.ColorAlpha(rl.Orange, 0.7)
 										}
 									}
+
+									// rl.DrawBillboard(camera, numbers[0], rl.Vector3Add(transformPoint(side[0], origin), rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+									// rl.DrawBillboard(camera, numbers[1], rl.Vector3Add(transformPoint(side[1], origin), rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+									// rl.DrawBillboard(camera, numbers[2], rl.Vector3Add(transformPoint(side[2], origin), rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+									// rl.DrawBillboard(camera, numbers[3], rl.Vector3Add(transformPoint(side[3], origin), rl.Vector3{Y: 0.2}), 0.2, rl.Black)
 
 									rl.DrawTriangle3D(transformPoint(side[q[0]], origin), transformPoint(side[q[1]], origin), transformPoint(side[q[2]], origin), clr)
 									rl.DrawTriangle3D(transformPoint(side[q[3]], origin), transformPoint(side[q[4]], origin), transformPoint(side[q[5]], origin), clr)
