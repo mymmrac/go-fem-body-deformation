@@ -412,7 +412,8 @@ func (f *FEM) choseCubeSide(cube [20][3]float64, n int) [8][3]float64 {
 		points[2], points[3] = points[3], points[2]
 		points[5], points[6], points[7] = points[6], points[7], points[5]
 	case 4:
-		// OK?
+		points[0], points[1], points[2], points[3] = points[3], points[2], points[1], points[0]
+		points[4], points[6] = points[6], points[4]
 	case 5:
 		// OK
 	}
@@ -485,13 +486,13 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 		}
 	case 4:
 		return [60]float64{
-			40 + 0:  fe3[0],
-			40 + 1:  fe3[1],
-			40 + 2:  fe3[2],
-			40 + 3:  fe3[3],
-			40 + 8:  fe3[4],
+			40 + 3:  fe3[0],
+			40 + 2:  fe3[1],
+			40 + 1:  fe3[2],
+			40 + 0:  fe3[3],
+			40 + 10: fe3[4],
 			40 + 9:  fe3[5],
-			40 + 10: fe3[6],
+			40 + 8:  fe3[6],
 			40 + 11: fe3[7],
 		}
 	case 5:
