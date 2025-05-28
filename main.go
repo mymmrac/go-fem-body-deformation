@@ -52,13 +52,14 @@ func main() {
 	pressure := NewInputValue(2.0)
 
 	fem := &FEM{
-		zp: make(map[ZP]bool),
+		zu: make(map[ElementSide]bool),
+		zp: make(map[ElementSide]bool),
 	}
 	body, bodyIndexes := fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
 	var deformedBody [][3]float64
 
 	// TODO: Remove this
-	// fem.zp[ZP{92, 0}] = true
+	// fem.zp[ElementSide{92, 0}] = true
 	// var rotation = rl.MatrixRotate(rl.GetCameraUp(&camera), 4.5)
 	// var view = rl.Vector3Subtract(camera.Position, camera.Target)
 	// view = rl.Vector3Transform(view, rotation)
@@ -174,7 +175,7 @@ func main() {
 		if showOriginal && showForces && rl.IsKeyPressed(rl.KeyT) {
 			a, b, c := bodySplit[0].Value, bodySplit[1].Value, bodySplit[2].Value
 			for i := range a * b {
-				fem.zp[ZP{i + a*b*(c-1), 5}] = true
+				fem.zp[ElementSide{i + a*b*(c-1), 5}] = true
 			}
 		}
 
@@ -294,10 +295,10 @@ func main() {
 							}
 
 							for n := range 6 {
-								chosen := fem.zp[ZP{i, n}]
+								chosen := fem.zp[ElementSide{i, n}]
 								if (closestCollisionI == i && closestCollisionN == n) || chosen {
 									if (closestCollisionI == i && closestCollisionN == n) && rl.IsMouseButtonPressed(rl.MouseButtonRight) {
-										fem.zp[ZP{i, n}] = !chosen
+										fem.zp[ElementSide{i, n}] = !chosen
 									}
 
 									q := quads[n]
