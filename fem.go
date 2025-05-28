@@ -24,9 +24,8 @@ type FEM struct {
 	akt      [][3]float64     // Coords of grid vertices in global space, npq * 3 (x, y, z)
 	nt       [][20]int        // Local element indexes, npq * 20
 
-	zu_ [][3]float64         // Fixed points, ?? * 3 (x, y, z)
-	zu  map[ElementSide]bool // Fixed points, index of the element and side
-	zp  map[ElementSide]bool // Pushed points, index of the element and side
+	zu map[ElementSide]bool // Fixed points, index of the element and side
+	zp map[ElementSide]bool // Pushed points, index of the element and side
 
 	dj    [][27][3][3]float64 // Jacobian matrix, npq * 27 * 3 (a, b, g) * 3 (x, y, z)
 	djDet [][27]float64       // Jacobian determinant, npq * 27
@@ -115,6 +114,7 @@ func (f *FEM) BuildElements(bodySize [3]float64, bodySplit [3]int) ([][3]float64
 		f.nt = append(f.nt, ntCube)
 	}
 
+	clear(f.zu)
 	clear(f.zp)
 	return f.akt, indexMapping
 }
@@ -155,18 +155,11 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 		f.mge = append(f.mge, f.createMGE(f.dfixyz[i], f.djDet[i], l, nu, mu))
 	}
 
-	f.zu_ = nil
-	for _, point := range f.akt {
-		if point[2] == 0 {
-			f.zu_ = append(f.zu_, point)
-		}
-	}
-
 	f.fe = make([][60]float64, len(f.nt))
-	for k, push := range f.zp {
+	for es, push := range f.zp {
 		if push {
-			for i, fe := range f.calculateFE(p, k.Side, f.choseCubeSide(f.elements[k.Element], k.Side)) {
-				f.fe[k.Element][i] += fe
+			for i, fe := range f.calculateFE(p, es.Side, f.choseCubeSide(f.elements[es.Element], es.Side)) {
+				f.fe[es.Element][i] += fe
 			}
 		}
 	}
@@ -445,8 +438,6 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 		}
 	}
 
-	fmt.Println(side)
-
 	switch side {
 	case 0:
 		return [60]float64{
@@ -583,8 +574,22 @@ func (f *FEM) calculateMG() [][]float64 {
 		}
 	}
 
-	// TODO: This should use indexes
-	for i := range f.zu_ {
+	for i, point := range f.akt {
+		keep := false
+		for es, fix := range f.zu {
+			if !fix {
+				continue
+			}
+
+			points := f.choseCubeSide(f.elements[es.Element], es.Side)
+			if slices.Contains(points[:], point) {
+				keep = true
+			}
+		}
+		if !keep {
+			continue
+		}
+
 		ix := 3*i + 0
 		iy := 3*i + 1
 		iz := 3*i + 2
