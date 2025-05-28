@@ -57,6 +57,14 @@ func main() {
 	body, bodyIndexes := fem.BuildElements(InputsToSlice3(bodySize), InputsToSlice3(bodySplit))
 	var deformedBody [][3]float64
 
+	// TODO: Remove this
+	// fem.zp[ZP{92, 0}] = true
+	// var rotation = rl.MatrixRotate(rl.GetCameraUp(&camera), 4.5)
+	// var view = rl.Vector3Subtract(camera.Position, camera.Target)
+	// view = rl.Vector3Transform(view, rotation)
+	// camera.Position = rl.Vector3Add(camera.Target, view)
+	// rl.CameraMoveToTarget(&camera, -7)
+
 	const inputTextSize = 20
 	var (
 		inputWidth  float32 = 64.0 * 1.4
@@ -223,7 +231,7 @@ func main() {
 							}
 
 							for _, n := range sides {
-								side := fem.choseCubeSideN(cube, n)
+								side := fem.choseCubeSide(cube, n)
 								collision := rl.GetRayCollisionQuad(ray,
 									transformPoint(side[0], origin), transformPoint(side[1], origin),
 									transformPoint(side[2], origin), transformPoint(side[3], origin),
@@ -285,30 +293,6 @@ func main() {
 								sides = append(sides, 5)
 							}
 
-							// collisions := make(map[int]rl.RayCollision)
-							// for _, n := range sides {
-							// 	side := fem.choseCubeSideN(cube, n)
-							// 	collision := rl.GetRayCollisionQuad(ray,
-							// 		transformPoint(side[0], origin), transformPoint(side[1], origin),
-							// 		transformPoint(side[2], origin), transformPoint(side[3], origin),
-							// 	)
-							// 	if collision.Hit {
-							// 		collisions[n] = collision
-							// 	}
-							// }
-							//
-							// // TODO: First get all collisions and only then choose closest
-							// closestCollision := -1
-							// for n, collision := range collisions {
-							// 	if closestCollision == -1 {
-							// 		closestCollision = n
-							// 		continue
-							// 	}
-							// 	if collision.Distance < collisions[closestCollision].Distance {
-							// 		closestCollision = n
-							// 	}
-							// }
-
 							for n := range 6 {
 								chosen := fem.zp[ZP{i, n}]
 								if (closestCollisionI == i && closestCollisionN == n) || chosen {
@@ -317,7 +301,7 @@ func main() {
 									}
 
 									q := quads[n]
-									side := fem.choseCubeSideN(cube, n)
+									side := fem.choseCubeSide(cube, n)
 
 									clr := rl.ColorAlpha(rl.LightGray, 0.7)
 									if chosen {
@@ -331,79 +315,7 @@ func main() {
 									rl.DrawTriangle3D(transformPoint(side[q[3]], origin), transformPoint(side[q[4]], origin), transformPoint(side[q[5]], origin), clr)
 								}
 							}
-
-							// for _, n := range sides {
-							// 	q := quads[n]
-							// 	side := fem.choseCubeSideN(cube, n)
-							// 	clr := rl.ColorAlpha(rl.Red, 0.7)
-							// 	rl.DrawTriangle3D(transformPoint(side[q[0]], origin), transformPoint(side[q[1]], origin), transformPoint(side[q[2]], origin), clr)
-							// 	rl.DrawTriangle3D(transformPoint(side[q[3]], origin), transformPoint(side[q[4]], origin), transformPoint(side[q[5]], origin), clr)
-							// }
-
-							// if x == 0 {
-							// 	side := fem.choseCubeSideN(cube, 0)
-							// 	clr := rl.ColorAlpha(rl.Red, 0.7)
-							// 	rl.DrawTriangle3D(transformPoint(side[0], origin), transformPoint(side[1], origin), transformPoint(side[2], origin), clr)
-							// 	rl.DrawTriangle3D(transformPoint(side[1], origin), transformPoint(side[3], origin), transformPoint(side[2], origin), clr)
-							// }
-							// if x == a-1 {
-							// 	side := fem.choseCubeSideN(cube, 1)
-							// 	clr := rl.ColorAlpha(rl.Blue, 0.7)
-							// 	rl.DrawTriangle3D(transformPoint(side[0], origin), transformPoint(side[2], origin), transformPoint(side[1], origin), clr)
-							// 	rl.DrawTriangle3D(transformPoint(side[1], origin), transformPoint(side[2], origin), transformPoint(side[3], origin), clr)
-							// }
-							//
-							// if z == 0 {
-							// 	side := fem.choseCubeSideN(cube, 2)
-							// 	clr := rl.ColorAlpha(rl.Magenta, 0.7)
-							// 	rl.DrawTriangle3D(transformPoint(side[0], origin), transformPoint(side[2], origin), transformPoint(side[1], origin), clr)
-							// 	rl.DrawTriangle3D(transformPoint(side[1], origin), transformPoint(side[2], origin), transformPoint(side[3], origin), clr)
-							// }
-							// if z == b-1 {
-							// 	side := fem.choseCubeSideN(cube, 3)
-							// 	clr := rl.ColorAlpha(rl.Pink, 0.7)
-							// 	rl.DrawTriangle3D(transformPoint(side[0], origin), transformPoint(side[2], origin), transformPoint(side[1], origin), clr)
-							// 	rl.DrawTriangle3D(transformPoint(side[1], origin), transformPoint(side[2], origin), transformPoint(side[3], origin), clr)
-							// }
-							//
-							// if y == 0 {
-							// 	side := fem.choseCubeSideN(cube, 4)
-							// 	clr := rl.ColorAlpha(rl.Green, 0.7)
-							// 	rl.DrawTriangle3D(transformPoint(side[0], origin), transformPoint(side[1], origin), transformPoint(side[2], origin), clr)
-							// 	rl.DrawTriangle3D(transformPoint(side[3], origin), transformPoint(side[0], origin), transformPoint(side[2], origin), clr)
-							// }
-							// if y == c-1 {
-							// 	side := fem.choseCubeSideN(cube, 5)
-							// 	clr := rl.ColorAlpha(rl.Yellow, 0.7)
-							// 	rl.DrawTriangle3D(transformPoint(side[0], origin), transformPoint(side[2], origin), transformPoint(side[1], origin), clr)
-							// 	rl.DrawTriangle3D(transformPoint(side[3], origin), transformPoint(side[2], origin), transformPoint(side[0], origin), clr)
-							// }
 						}
-
-						// for i, cube := range fem.elements[0+a*b*(c-1) : a*b+a*b*(c-1)] {
-						// 	side := fem.choseCubeSide(cube, false, 2)
-						// 	collision := rl.GetRayCollisionQuad(ray,
-						// 		transformPoint(side[0], origin), transformPoint(side[1], origin),
-						// 		transformPoint(side[2], origin), transformPoint(side[3], origin),
-						// 	)
-						// 	chosen := fem.zp[i+a*b*(c-1)]
-						// 	if collision.Hit || chosen {
-						// 		if collision.Hit && rl.IsMouseButtonPressed(rl.MouseButtonRight) {
-						// 			fem.zp[i+a*b*(c-1)] = !chosen
-						// 		}
-						//
-						// 		clr := rl.ColorAlpha(rl.LightGray, 0.7)
-						// 		if chosen {
-						// 			clr = rl.ColorAlpha(rl.Orange, 0.4)
-						// 			if collision.Hit {
-						// 				clr = rl.ColorAlpha(rl.Orange, 0.7)
-						// 			}
-						// 		}
-						//
-						// 		rl.DrawTriangle3D(transformPoint(side[0], origin), transformPoint(side[2], origin), transformPoint(side[1], origin), clr)
-						// 		rl.DrawTriangle3D(transformPoint(side[3], origin), transformPoint(side[2], origin), transformPoint(side[0], origin), clr)
-						// 	}
-						// }
 					}
 				}
 				if deformedBody != nil {
@@ -414,6 +326,13 @@ func main() {
 				rl.DrawCylinderEx(a0, aX, thickness, thickness, 8, rl.Red)
 				rl.DrawCylinderEx(a0, aY, thickness, thickness, 8, rl.Green)
 				rl.DrawCylinderEx(a0, aZ, thickness, thickness, 8, rl.Blue)
+
+				// TODO: Remove?
+				// for i, point := range localPoints3D {
+				// 	p := transformPoint(point, rl.Vector3{})
+				// 	rl.DrawSphere(p, 0.05, rl.Red)
+				// 	rl.DrawBillboard(camera, numbers[i], rl.Vector3Add(p, rl.Vector3{Y: 0.2}), 0.2, rl.Black)
+				// }
 			}
 			rl.EndMode3D()
 
@@ -527,7 +446,7 @@ func main() {
 			if gui.Button(
 				rl.NewRectangle(float32(rl.GetScreenWidth())-padding-inputWidth, float32(rl.GetScreenHeight())-padding-inputHeight, inputWidth, inputHeight),
 				runBtnText,
-			) {
+			) || rl.IsKeyPressed(rl.KeyEnter) {
 				running = 1
 			} else if running > 10 {
 				slog.Info("Running...",

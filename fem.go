@@ -165,8 +165,9 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 	f.fe = make([][60]float64, len(f.nt))
 	for k, push := range f.zp {
 		if push {
-			// TODO: Check case when same element is pushed multiple times
-			f.fe[k.Index] = f.calculateFE(p, f.choseCubeSideN(f.elements[k.Index], k.Side))
+			for i, fe := range f.calculateFE(p, k.Side, f.choseCubeSide(f.elements[k.Index], k.Side)) {
+				f.fe[k.Index][i] += fe
+			}
 		}
 	}
 
@@ -378,13 +379,10 @@ func (f *FEM) createMGE(dfixyz [27][20][3]float64, djDet [27]float64, l, nu, mu 
 	return mge
 }
 
-func (f *FEM) choseCubeSideN(cube [20][3]float64, n int) [8][3]float64 {
-	return f.choseCubeSide(cube, n%2 == 0, n/2)
-}
-
-func (f *FEM) choseCubeSide(cube [20][3]float64, farSide bool, sideOfAxis int) [8][3]float64 {
+func (f *FEM) choseCubeSide(cube [20][3]float64, n int) [8][3]float64 {
+	sideOfAxis := n / 2
 	var coordValue float64
-	if farSide {
+	if n%2 == 0 {
 		coordValue = math.MaxFloat64
 		for _, point := range cube {
 			coordValue = min(point[sideOfAxis], coordValue)
@@ -397,17 +395,39 @@ func (f *FEM) choseCubeSide(cube [20][3]float64, farSide bool, sideOfAxis int) [
 	}
 
 	i := 0
+	var indexes [8]int // TODO: Remove
 	var points [8][3]float64
-	for _, point := range cube {
+	for j, point := range cube {
 		if point[sideOfAxis] == coordValue {
 			points[i] = point
+			indexes[i] = j
 			i++
 		}
 	}
+
+	switch n {
+	case 0:
+		points[0], points[1] = points[1], points[0]
+		points[6], points[7] = points[7], points[6]
+	case 1:
+		points[2], points[3] = points[3], points[2]
+		points[5], points[6], points[7] = points[6], points[7], points[5]
+	case 2:
+		points[2], points[3] = points[3], points[2]
+		points[5], points[6], points[7] = points[6], points[7], points[5]
+	case 3:
+		points[2], points[3] = points[3], points[2]
+		points[5], points[6], points[7] = points[6], points[7], points[5]
+	case 4:
+		// OK?
+	case 5:
+		// OK
+	}
+
 	return points
 }
 
-func (f *FEM) calculateFE(p float64, zp [8][3]float64) [60]float64 {
+func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 	dXYZdNT := f.dXYZdNT(zp)
 	var fe1, fe2, fe3 [8]float64
 
@@ -425,13 +445,83 @@ func (f *FEM) calculateFE(p float64, zp [8][3]float64) [60]float64 {
 		}
 	}
 
-	return [60]float64{
-		0, 0, 0, 0, fe1[0], fe1[1], fe1[2], fe1[3], 0, 0,
-		0, 0, 0, 0, 0, 0, fe1[4], fe1[5], fe1[6], fe1[7],
-		0, 0, 0, 0, fe2[0], fe2[1], fe2[2], fe2[3], 0, 0,
-		0, 0, 0, 0, 0, 0, fe2[4], fe2[5], fe2[6], fe2[7],
-		0, 0, 0, 0, fe3[0], fe3[1], fe3[2], fe3[3], 0, 0,
-		0, 0, 0, 0, 0, 0, fe3[4], fe3[5], fe3[6], fe3[7],
+	fmt.Println(side)
+
+	switch side {
+	case 0:
+		fmt.Println(fe1) // DONE
+		return [60]float64{
+			3:  fe1[0],
+			0:  fe1[1],
+			4:  fe1[2],
+			7:  fe1[3],
+			11: fe1[4],
+			12: fe1[5],
+			19: fe1[6],
+			15: fe1[7],
+		}
+	case 1:
+		fmt.Println(fe1) // DONE
+		return [60]float64{
+			1:  fe1[0],
+			2:  fe1[1],
+			6:  fe1[2],
+			5:  fe1[3],
+			9:  fe1[4],
+			14: fe1[5],
+			17: fe1[6],
+			13: fe1[7],
+		}
+	case 2:
+		fmt.Println(fe2) // DONE
+		return [60]float64{
+			20 + 0:  fe2[0],
+			20 + 1:  fe2[1],
+			20 + 5:  fe2[2],
+			20 + 4:  fe2[3],
+			20 + 8:  fe2[4],
+			20 + 13: fe2[5],
+			20 + 16: fe2[6],
+			20 + 12: fe2[7],
+		}
+	case 3:
+		fmt.Println(fe2) // DONE
+		return [60]float64{
+			20 + 2:  fe2[0],
+			20 + 3:  fe2[1],
+			20 + 7:  fe2[2],
+			20 + 6:  fe2[3],
+			20 + 10: fe2[4],
+			20 + 15: fe2[5],
+			20 + 18: fe2[6],
+			20 + 14: fe2[7],
+		}
+	case 4:
+		fmt.Println(fe3) // DONE
+		return [60]float64{
+			40 + 0:  fe3[0],
+			40 + 1:  fe3[1],
+			40 + 2:  fe3[2],
+			40 + 3:  fe3[3],
+			40 + 8:  fe3[4],
+			40 + 9:  fe3[5],
+			40 + 10: fe3[6],
+			40 + 11: fe3[7],
+		}
+	case 5:
+		fmt.Println(fe3) // DONE
+		return [60]float64{
+			40 + 4:  fe3[0],
+			40 + 5:  fe3[1],
+			40 + 6:  fe3[2],
+			40 + 7:  fe3[3],
+			40 + 16: fe3[4],
+			40 + 17: fe3[5],
+			40 + 18: fe3[6],
+			40 + 19: fe3[7],
+		}
+	default:
+		panic("invalid side")
 	}
 }
 
