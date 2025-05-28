@@ -95,6 +95,7 @@ func main() {
 	showNumbers := false
 	showOriginal := true
 	showForces := true
+	showGrid := true
 	opt := BodyDrawOptions{
 		ShowEdges:    true,
 		ShowVertexes: false,
@@ -170,6 +171,9 @@ func main() {
 		if showOriginal && rl.IsKeyPressed(rl.KeyF) {
 			showForces = !showForces
 		}
+		if rl.IsKeyPressed(rl.KeyG) {
+			showGrid = !showGrid
+		}
 		if rl.IsKeyPressed(rl.KeyE) {
 			opt.ShowEdges = !opt.ShowEdges
 		}
@@ -224,7 +228,9 @@ func main() {
 
 			rl.BeginMode3D(camera)
 			{
-				rl.DrawGrid(32, 1)
+				if showGrid {
+					rl.DrawGrid(32, 1)
+				}
 
 				origin := rl.Vector3Scale(InputsToVec3(bodySize), 0.5)
 				origin.Y, origin.Z = origin.Z, origin.Y
