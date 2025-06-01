@@ -311,9 +311,9 @@ func (f *FEM) createMGE(dfixyz [27][20][3]float64, djDet [27]float64, l, nu, mu 
 			var a11, a22, a33 float64
 			var a12, a13, a23 float64
 
-			for _, m := range mgeCoefficients {
-				for _, n := range mgeCoefficients {
-					for _, k := range mgeCoefficients {
+			for _, m := range gaussianCoefficients {
+				for _, n := range gaussianCoefficients {
+					for _, k := range gaussianCoefficients {
 						dfi := dfixyz[index]
 
 						a11 += m * n * k * (l*(1-nu)*(dfi[i][0]*dfi[j][0]) +
@@ -422,8 +422,8 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 
 	for i := range 8 {
 		index := 0
-		for _, m := range mgeCoefficients {
-			for _, n := range mgeCoefficients {
+		for _, m := range gaussianCoefficients {
+			for _, n := range gaussianCoefficients {
 				dXYZdNTItem := dXYZdNT[index]
 				depsiXYZdeNTItem := depsiXYZdeNT[index][i]
 				fe1[i] += m * n * p * (dXYZdNTItem[1][0]*dXYZdNTItem[2][1] - dXYZdNTItem[2][0]*dXYZdNTItem[1][1]) * depsiXYZdeNTItem

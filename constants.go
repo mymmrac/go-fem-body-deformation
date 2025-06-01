@@ -23,7 +23,7 @@ var depsite [3 * 3][8][2]float64
 
 var depsiXYZdeNT [3 * 3][8]float64
 
-var mgeCoefficients = [3]float64{5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0}
+var gaussianCoefficients = [3]float64{5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0}
 
 func init() {
 	calculateDFIABG()
