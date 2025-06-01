@@ -11,9 +11,6 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-// TODO: Select fixed sides
-// TODO: Clean up comments
-
 type ElementSide struct {
 	Element int
 	Side    int
@@ -36,7 +33,7 @@ type FEM struct {
 
 	fe [][60]float64 // Forces on elements, npq * 60
 
-	mg [][]float64 // Global stiffness matrix, ?? * ??
+	mg [][]float64 // Global stiffness matrix, npq * 3 (x, y, z) * npq * 3 (x, y, z)
 	f  []float64   // Forces, npq * 3 (x, y, z)
 
 	u []float64 // Displacements, npq * 3 (x, y, z)
@@ -154,6 +151,7 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 	for i := range f.elements {
 		f.mge = append(f.mge, f.createMGE(f.dfixyz[i], f.djDet[i], l, nu, mu))
 	}
+	f.mg = f.calculateMG()
 
 	f.fe = make([][60]float64, len(f.nt))
 	for es, push := range f.zp {
@@ -163,9 +161,6 @@ func (f *FEM) ApplyForce(e, nu, p float64) [][3]float64 {
 			}
 		}
 	}
-
-	f.mg = f.calculateMG()
-
 	f.f = f.calculateF()
 
 	flatMG := make([]float64, 0, len(f.mg)*len(f.mg[0]))
