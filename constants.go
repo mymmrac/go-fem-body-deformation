@@ -2,7 +2,9 @@ package main
 
 import "math"
 
-var gaussian = [3]float64{-math.Sqrt(0.6), 0, math.Sqrt(0.6)}
+var gaussianCoords = [3]float64{-math.Sqrt(0.6), 0, math.Sqrt(0.6)}
+
+var gaussianConst = [3]float64{5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0}
 
 var localPoints2D = [8][2]float64{
 	{-1, -1}, {1, -1}, {1, 1}, {-1, 1},
@@ -17,24 +19,25 @@ var localPoints3D = [20][3]float64{
 	{0, 1, 1}, {1, 0, 1}, {0, -1, 1}, {-1, 0, 1},
 }
 
+// Derivative of approximation function in local space, 27 * 20 * 3 (x, y, z)
 var dfiabg [3 * 3 * 3][20][3]float64
 
-var depsite [3 * 3][8][2]float64
+// Approximation function in local space, 27 * 8 * 2 (x, y)
+var dpsite [3 * 3][8][2]float64
 
-var depsiXYZdeNT [3 * 3][8]float64
-
-var gaussianCoefficients = [3]float64{5.0 / 9.0, 8.0 / 9.0, 5.0 / 9.0}
+// Sub integral of approximation function in local space, 3 * 3 * 8
+var dpsiteXYZdeNT [3 * 3][8]float64
 
 func init() {
 	calculateDFIABG()
-	calculateDEPSITE()
-	calculateDepsiXYZdeNT()
+	calculateDPSITE()
+	calculateDPsiteXYZdeNT()
 }
 
 func calculateDFIABG() {
-	for k1, gamma := range gaussian {
-		for k2, beta := range gaussian {
-			for k3, alpha := range gaussian {
+	for k1, gamma := range gaussianCoords {
+		for k2, beta := range gaussianCoords {
+			for k3, alpha := range gaussianCoords {
 				for i, point := range localPoints3D {
 					if i <= 7 {
 						dfiabg[k1*9+k2*3+k3][i] = dfiabg18(alpha, beta, gamma, point[0], point[1], point[2])
@@ -71,16 +74,16 @@ func dfiabg14(alpha, beta, gamma float64, alphaI, betaI, gammaI float64) [3]floa
 	}
 }
 
-func calculateDEPSITE() {
-	for k1, eta := range gaussian {
-		for k2, tau := range gaussian {
+func calculateDPSITE() {
+	for k1, eta := range gaussianCoords {
+		for k2, tau := range gaussianCoords {
 			for i, point := range localPoints2D {
 				if i < 4 {
-					depsite[k1*3+k2][i] = psint14der(eta, tau, point[0], point[1])
+					dpsite[k1*3+k2][i] = psint14der(eta, tau, point[0], point[1])
 				} else if i == 4 || i == 6 {
-					depsite[k1*3+k2][i] = psint57der(eta, tau, point[0], point[1])
+					dpsite[k1*3+k2][i] = psint57der(eta, tau, point[0], point[1])
 				} else if i == 5 || i == 7 {
-					depsite[k1*3+k2][i] = psint68der(eta, tau, point[0], point[1])
+					dpsite[k1*3+k2][i] = psint68der(eta, tau, point[0], point[1])
 				}
 			}
 		}
@@ -108,16 +111,16 @@ func psint68der(eta, tau, x, _ float64) [2]float64 {
 	}
 }
 
-func calculateDepsiXYZdeNT() {
-	for k1, eta := range gaussian {
-		for k2, tau := range gaussian {
+func calculateDPsiteXYZdeNT() {
+	for k1, eta := range gaussianCoords {
+		for k2, tau := range gaussianCoords {
 			for i, point := range localPoints2D {
 				if i < 4 {
-					depsiXYZdeNT[k1*3+k2][i] = psint14(eta, tau, point[0], point[1])
+					dpsiteXYZdeNT[k1*3+k2][i] = psint14(eta, tau, point[0], point[1])
 				} else if i == 4 || i == 6 {
-					depsiXYZdeNT[k1*3+k2][i] = psint57(eta, tau, point[0], point[1])
+					dpsiteXYZdeNT[k1*3+k2][i] = psint57(eta, tau, point[0], point[1])
 				} else if i == 5 || i == 7 {
-					depsiXYZdeNT[k1*3+k2][i] = psint68(eta, tau, point[0], point[1])
+					dpsiteXYZdeNT[k1*3+k2][i] = psint68(eta, tau, point[0], point[1])
 				}
 			}
 		}
