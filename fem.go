@@ -29,12 +29,11 @@ type FEM struct {
 
 	dfixyz [][27][20][3]float64 // Derivative of approximation function in global space, npq * 27 * 20 * 3 (x, y, z)
 
-	mge [][60][60]float64 // Global stiffness matrix for elements, npq * 60 * 60
+	mge [][60][60]float64 // Stiffness matrix for elements, npq * 60 * 60
+	mg  [][]float64       // Stiffness matrix, npq * 3 (x, y, z) * npq * 3 (x, y, z)
 
-	fe [][60]float64 // Forces on elements, npq * 60
-
-	mg [][]float64 // Global stiffness matrix, npq * 3 (x, y, z) * npq * 3 (x, y, z)
-	f  []float64   // Forces, npq * 3 (x, y, z)
+	fe [][60]float64 // Forces for elements, npq * 60
+	f  []float64     // Forces, npq * 3 (x, y, z)
 
 	u []float64 // Displacements, npq * 3 (x, y, z)
 }
