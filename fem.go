@@ -424,11 +424,11 @@ func (f *FEM) calculateFE(p float64, side int, zp [8][3]float64) [60]float64 {
 		index := 0
 		for _, m := range gaussianConst {
 			for _, n := range gaussianConst {
-				dXYZdNTItem := dXYZdNT[index]
-				depsiXYZdeNTItem := dpsiteXYZdeNT[index][i]
-				fe1[i] += m * n * p * (dXYZdNTItem[1][0]*dXYZdNTItem[2][1] - dXYZdNTItem[2][0]*dXYZdNTItem[1][1]) * depsiXYZdeNTItem
-				fe2[i] += m * n * p * (dXYZdNTItem[2][0]*dXYZdNTItem[0][1] - dXYZdNTItem[0][0]*dXYZdNTItem[2][1]) * depsiXYZdeNTItem
-				fe3[i] += m * n * p * (dXYZdNTItem[0][0]*dXYZdNTItem[1][1] - dXYZdNTItem[1][0]*dXYZdNTItem[0][1]) * depsiXYZdeNTItem
+				dXYZdNTi := dXYZdNT[index]
+				dpsiteXYZdeNTi := dpsiteXYZdeNT[index][i]
+				fe1[i] += m * n * p * (dXYZdNTi[1][0]*dXYZdNTi[2][1] - dXYZdNTi[2][0]*dXYZdNTi[1][1]) * dpsiteXYZdeNTi
+				fe2[i] += m * n * p * (dXYZdNTi[2][0]*dXYZdNTi[0][1] - dXYZdNTi[0][0]*dXYZdNTi[2][1]) * dpsiteXYZdeNTi
+				fe3[i] += m * n * p * (dXYZdNTi[0][0]*dXYZdNTi[1][1] - dXYZdNTi[1][0]*dXYZdNTi[0][1]) * dpsiteXYZdeNTi
 				index++
 			}
 		}
